@@ -156,6 +156,38 @@
                 </div>
             </div>
         </section>
+
+        <!-- Partners Section (NEW) -->
+        <section class="mb-20">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-4xl font-bold text-text-dark">Official Partners</h2>
+                <button id="add-partner-btn" onclick="toggleAddPartnerForm()" class="hidden px-4 py-2 bg-accent-coffee text-white font-semibold rounded-lg hover-darken transition">
+                    <i class="fas fa-handshake mr-2"></i> Add Partner
+                </button>
+            </div>
+            
+            <!-- Add Partner Form (Admin Only) -->
+            <div id="add-partner-form" class="hidden bg-card-light p-6 rounded-xl shadow-xl mb-8 border border-accent-coffee/50 max-w-4xl mx-auto md:mx-0">
+                <h3 class="text-2xl font-bold mb-4 text-accent-coffee">Add New Partner</h3>
+                <input type="text" id="new-partner-name" placeholder="Partner Name (e.g., Studio Ghibli)" class="w-full p-2 mb-3 border rounded-lg focus:ring-accent-coffee focus:border-accent-coffee text-text-dark">
+                <input type="url" id="new-partner-logo" placeholder="Logo URL (e.g., https://example.com/logo.png)" class="w-full p-2 mb-3 border rounded-lg focus:ring-accent-coffee focus:border-accent-coffee text-text-dark">
+                <input type="url" id="new-partner-url" placeholder="Website URL (e.g., https://ghibli.jp/)" class="w-full p-2 mb-3 border rounded-lg focus:ring-accent-coffee focus:border-accent-coffee text-text-dark">
+                <textarea id="new-partner-description" placeholder="Short description of the partnership..." rows="2" class="w-full p-2 mb-4 border rounded-lg focus:ring-accent-coffee focus:border-accent-coffee text-text-dark"></textarea>
+                
+                <button onclick="addPartner()" class="px-5 py-2 bg-accent-coffee text-white font-semibold rounded-lg hover-darken transition">
+                    <i class="fas fa-save mr-2"></i> Save Partner
+                </button>
+                <p id="partner-status-message" class="mt-3 text-sm"></p>
+            </div>
+
+            <div id="partners-list" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+                <!-- Partners loaded here -->
+                 <div class="col-span-full flex justify-center items-center h-24 text-gray-500 text-lg">
+                    <i class="fas fa-sync-alt animate-spin-slow mr-3"></i> Loading Partners...
+                </div>
+            </div>
+        </section>
+        
     </main>
 
     <!-- Footer / User Auth Area -->
@@ -169,20 +201,23 @@
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, collection, setDoc, deleteDoc, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // REMOVED sendEmailVerification from imports
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, collection, setDoc, deleteDoc, addDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Set Firebase Log Level to Debug
         setLogLevel('Debug');
 
-        //uwu
+        // --- FIREBASE CONFIGURATION (INJECTED DIRECTLY) ---
+        // This configuration object was provided by the user.
+        // The API key is heavily obfuscated by splitting it into 5 parts and scrambling the order.
         const keySegments = [
-            { part: "IJStPJ9u", order: 2 },
-            { part: "SRZXl1Q", order: 4 },
-            { part: "AIzaSyCx", order: 0 },
-            { part: "cbb6wYMk", order: 3 },
-            { part: "0XzKZyz2", order: 1 } 
+            { part: "IJStPJ9u", order: 2 },  // Part 3
+            { part: "SRZXl1Q", order: 4 },   // Part 5
+            { part: "AIzaSyCx", order: 0 },  // Part 1
+            { part: "0XzKZyz2", order: 1 },  // Part 2
+            { part: "cbb6wYMk", order: 3 }   // Part 5
         ];
         
         // Reassemble the key by sorting the array by the 'order' property and joining the 'part' strings
@@ -213,17 +248,26 @@
         let isEditingAbout = false;
         let musicData = [];
         let newsData = []; 
+        let partnersData = []; // State for Partners
         let configData = { 
             about: "I'm JinSun, a music producer and composer. I create emotional, atmospheric, and modern style music inspired by Japanese anime aesthetics. My goal is to bring stories to life through sound, focusing on intricate textures and evocative melodies.", 
             youtube: "https://youtube.com/jinsun", 
             spotify: "https://spotify.com/jinsun", 
-            facebook: "https://facebook.com/jinsun" 
+            facebook: "https://facebook.com/jinsun", 
+            discord: "https://discord.gg/jinsun" 
         };
         let currentAuthMode = 'guest_prompt'; // 'guest_prompt', 'login' or 'signup' 
         
         // Flag to track when authentication is complete and listeners have started
         let isAuthReady = false;
         let areListenersStarted = false;
+
+        // --- FIRESTORE PATHS ---
+        const PUBLIC_SETTINGS_DOC_PATH = `artifacts/${appId}/public/data/jinsun_settings/config`;
+        const PUBLIC_MUSIC_COLLECTION_PATH = `artifacts/${appId}/public/data/jinsun_music`;
+        const PUBLIC_NEWS_COLLECTION_PATH = `artifacts/${appId}/public/data/jinsun_news`; 
+        const PUBLIC_PARTNERS_COLLECTION_PATH = `artifacts/${appId}/public/data/jinsun_partners`;
+
 
         // --- FIREBASE INITIALIZATION & AUTH ---
         if (!firebaseConfig.apiKey) {
@@ -243,47 +287,63 @@
                 /**
                  * Attempts to sign in using the custom token, or falls back to anonymous sign-in.
                  */
-                const attemptInitialSignIn = async () => {
-                    // 1. Try custom token sign-in if available (highest priority)
+                const attemptInitialSignIn = async (user) => {
+                    // 1. If we have a user from persistence, we're done.
+                    if (user) {
+                        return;
+                    } 
+
+                    // 2. Try custom token sign-in if available
                     if (initialAuthToken) {
                         try {
-                            await signInWithCustomToken(auth, initialAuthToken);
+                            const result = await signInWithCustomToken(auth, initialAuthToken);
+                            console.log("Signed in with custom token.");
+                            return;
                         } catch (err) {
                             console.warn("Custom token failed, falling back to anonymous:", err);
                         }
                     }
                     
-                    // 2. If no user is signed in yet, sign in anonymously for public read access.
+                    // 3. If no user is signed in yet, sign in anonymously for public read access.
                     if (!auth.currentUser) {
                         try {
+                            // FIX: Explicitly set persistence before signing in anonymously
+                            // This ensures the same anonymous user is used on subsequent visits/refreshes
+                            await setPersistence(auth, browserSessionPersistence); 
+                            
                             await signInAnonymously(auth);
+                            console.log("Signed in anonymously.");
+                            
                         } catch (e) {
                             console.error("Failed to sign in anonymously (Check Firestore Security Rules!):", e);
                             // If sign-in fails, we must still proceed to set isAuthReady=true
-                            // so the app renders the UI even without a successful auth connection.
                         }
                     }
                 };
                 
-                // Start the asynchronous sign-in process immediately
-                attemptInitialSignIn();
-                
                 // 3. Auth State Listener (CRITICAL: Waits for ANY user to be established)
-                onAuthStateChanged(auth, (user) => {
-                    currentUser = user;
+                onAuthStateChanged(auth, async (user) => {
+                    // This listener fires when state changes (including load from persistence)
+                    await attemptInitialSignIn(user);
+                    
+                    currentUser = auth.currentUser; // Use auth.currentUser which is definitive
                     // Always update admin status whenever the user changes
-                    isAdmin = !!user?.email && user.email === ADMIN_EMAIL;
+                    isAdmin = !!currentUser?.email && currentUser.email === ADMIN_EMAIL;
                     
                     if (!isAuthReady) {
                         isAuthReady = true;
                     }
 
-                    if (user && db && !areListenersStarted) {
+                    if (currentUser && db && !areListenersStarted) {
                         startFirestoreListeners();
                         areListenersStarted = true;
                         console.log("Firestore listeners started.");
-                    } else if (!user && isAuthReady) {
-                        // This log now represents a genuine sign out or the final state after a sign-in failure.
+                        
+                        // If a real user is logged in, hide the guest prompt
+                        if (!currentUser.isAnonymous) {
+                           currentAuthMode = 'profile'; 
+                        }
+                    } else if (!currentUser && isAuthReady) {
                         console.log("User state is null. Data listeners will not run until user is authenticated.");
                     }
 
@@ -300,28 +360,7 @@
                 renderApp(); 
             }
         }
-
-
-        function renderError(message) {
-             document.getElementById('music-list').innerHTML = `<div class="col-span-full flex justify-center items-center p-10 text-xl text-error-red">${message}</div>`;
-             document.getElementById('news-list').innerHTML = `<div class="flex justify-start items-center p-4 text-xl text-error-red">${message}</div>`;
-             const aboutEl = document.getElementById('about-content');
-             if(aboutEl) aboutEl.innerHTML = `<p class="text-error-red p-2">${message}</p>`;
-             
-             const authEl = document.getElementById('auth-ui');
-             if(authEl) authEl.innerHTML = `
-                    <div class="flex justify-center items-center h-16 text-gray-500 text-md">
-                        <i class="fas fa-exclamation-triangle mr-3 text-error-red"></i> ${message}
-                    </div>
-                `;
-        }
-
-
-        // --- FIRESTORE PATHS ---
-        const PUBLIC_SETTINGS_DOC_PATH = `artifacts/${appId}/public/data/jinsun_settings/config`;
-        const PUBLIC_MUSIC_COLLECTION_PATH = `artifacts/${appId}/public/data/jinsun_music`;
-        const PUBLIC_NEWS_COLLECTION_PATH = `artifacts/${appId}/public/data/jinsun_news`; 
-
+        
         // --- FIRESTORE LISTENERS ---
         function startFirestoreListeners() {
             if (!db) return;
@@ -369,6 +408,21 @@
                 console.error("Error reading news data (Check Security Rules!):", error);
                 renderApp();
             });
+            
+            // 4. Listen to Partners Collection
+            const qPartners = collection(db, PUBLIC_PARTNERS_COLLECTION_PATH);
+            onSnapshot(qPartners, (snapshot) => {
+                partnersData = [];
+                snapshot.forEach((doc) => {
+                    partnersData.push({ id: doc.id, isEditing: false, ...doc.data() });
+                });
+                // Sort alphabetically by name (client-side sorting)
+                partnersData.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+                renderApp();
+            }, (error) => {
+                console.error("Error reading partners data (Check Security Rules!):", error);
+                renderApp();
+            });
         }
         
         // Helper to display auth errors
@@ -396,10 +450,16 @@
                 return;
             }
 
-            setAuthStatus('Signing up...', false);
+            setAuthStatus('Creating account...', false);
             try {
+                // Ensure persistence is set before creating the user session
+                await setPersistence(auth, browserSessionPersistence);
+                // User is signed in immediately upon creation (No email verification required)
                 await createUserWithEmailAndPassword(auth, email, password);
-                setAuthStatus('Sign up successful! Welcome!', false);
+                
+                setAuthStatus('Account created and signed in successfully!', false);
+                currentAuthMode = 'profile'; // Move directly to profile view
+                
             } catch (error) {
                 console.error("Sign Up Error:", error);
                 setAuthStatus(`Sign Up Failed: ${error.message}`, true);
@@ -418,8 +478,12 @@
 
             setAuthStatus('Logging in...', false);
             try {
+                await setPersistence(auth, browserSessionPersistence); 
+                // Sign in without checking for email verification status
                 await signInWithEmailAndPassword(auth, email, password);
+                
                 setAuthStatus('Login successful!', false);
+                currentAuthMode = 'profile'; 
             } catch (error) {
                 console.error("Login Error:", error);
                 setAuthStatus(`Login Failed: ${error.message}`, true);
@@ -463,6 +527,7 @@
                 youtube: document.getElementById('youtube-link-input').value,
                 spotify: document.getElementById('spotify-link-input').value,
                 facebook: document.getElementById('facebook-link-input').value,
+                discord: document.getElementById('discord-link-input').value, 
             };
             try {
                 await setDoc(doc(db, PUBLIC_SETTINGS_DOC_PATH), newLinks, { merge: true });
@@ -613,6 +678,81 @@
             }
         }
 
+        // NEW: Partner functions
+        window.addPartner = async function() {
+            const statusEl = document.getElementById('partner-status-message');
+            statusEl.textContent = ''; 
+
+            if (!isAdmin || !db) { 
+                statusEl.className = 'mt-3 text-sm text-error-red';
+                statusEl.textContent = 'Action failed: Must be Admin.';
+                return; 
+            }
+
+            const name = document.getElementById('new-partner-name').value;
+            const logoUrl = document.getElementById('new-partner-logo').value;
+            const url = document.getElementById('new-partner-url').value;
+            const description = document.getElementById('new-partner-description').value;
+
+            if (!name || !url) {
+                statusEl.className = 'mt-3 text-sm text-error-red';
+                statusEl.textContent = 'Partner Name and Website URL are required.';
+                return;
+            }
+
+            statusEl.className = 'mt-3 text-sm text-blue-600';
+            statusEl.textContent = 'Saving partner...';
+            
+            const newPartner = { name, logoUrl, url, description };
+            
+            try {
+                await addDoc(collection(db, PUBLIC_PARTNERS_COLLECTION_PATH), newPartner);
+                
+                document.getElementById('new-partner-name').value = '';
+                document.getElementById('new-partner-logo').value = '';
+                document.getElementById('new-partner-url').value = '';
+                document.getElementById('new-partner-description').value = '';
+                
+                statusEl.className = 'mt-3 text-sm text-green-600';
+                statusEl.textContent = 'Partner saved successfully!';
+                
+                setTimeout(toggleAddPartnerForm, 1000); 
+
+            } catch(e) {
+                console.error("Error saving partner:", e);
+                statusEl.className = 'mt-3 text-sm text-error-red';
+                statusEl.textContent = `Saving Failed. Error: ${e.message}`;
+            }
+        }
+
+        window.deletePartner = async function(id) {
+            if (!isAdmin || !db) { console.error("Permission or DB denied."); return; }
+            try {
+                await deleteDoc(doc(db, PUBLIC_PARTNERS_COLLECTION_PATH, id));
+                console.log(`Partner ID: ${id} deleted successfully.`);
+            } catch (error) {
+                console.error("Error deleting partner document:", error);
+            }
+        }
+
+        window.savePartnerEntry = async function(id) {
+            if (!isAdmin || !db) { console.error("Permission or DB denied."); return; }
+            const partnerItemEl = document.getElementById(`partner-item-${id}`);
+            const updatedData = {
+                name: partnerItemEl.querySelector(`#edit-partner-name-${id}`).value,
+                logoUrl: partnerItemEl.querySelector(`#edit-partner-logo-${id}`).value,
+                url: partnerItemEl.querySelector(`#edit-partner-url-${id}`).value,
+                description: partnerItemEl.querySelector(`#edit-partner-description-${id}`).value,
+            };
+
+            try {
+                await setDoc(doc(db, PUBLIC_PARTNERS_COLLECTION_PATH, id), updatedData, { merge: true });
+                togglePartnerEdit(id); 
+            } catch(e) {
+                console.error("Error saving partner entry:", e);
+            }
+        }
+        
         // --- UI CONTROL FUNCTIONS ---
         
         window.toggleSocialEdit = function() {
@@ -655,6 +795,22 @@
             });
             renderApp();
         }
+        
+        window.toggleAddPartnerForm = function() {
+            const form = document.getElementById('add-partner-form');
+            form.classList.toggle('hidden');
+            document.getElementById('partner-status-message').textContent = '';
+        }
+
+        window.togglePartnerEdit = function(id) {
+            partnersData = partnersData.map(item => {
+                 const isTarget = item.id === id;
+                return isTarget 
+                    ? { ...item, isEditing: !item.isEditing } 
+                    : { ...item, isEditing: false };
+            });
+            renderApp();
+        }
 
         // --- RENDERING FUNCTIONS ---
         
@@ -671,6 +827,9 @@
                     </a>
                     <a href="${links.facebook}" target="_blank" class="text-text-dark hover:text-blue-700 transition duration-300 transform hover:scale-110" aria-label="Facebook Page">
                         <i class="fab fa-facebook-f text-2xl"></i>
+                    </a>
+                    <a href="${links.discord}" target="_blank" class="text-text-dark hover:text-indigo-600 transition duration-300 transform hover:scale-110" aria-label="Discord Server">
+                        <i class="fab fa-discord text-2xl"></i>
                     </a>
                     ${isAdmin ? `<button onclick="toggleSocialEdit()" class="ml-4 text-sm text-accent-coffee hover:text-accent-light transition"><i class="fas fa-cog"></i></button>` : ''}
                 </div>
@@ -694,6 +853,7 @@
                             <input id="youtube-link-input" type="url" value="${links.youtube}" placeholder="YouTube URL" class="w-full p-2 border rounded-lg text-text-dark">
                             <input id="spotify-link-input" type="url" value="${links.spotify}" placeholder="Spotify URL" class="w-full p-2 border rounded-lg text-text-dark">
                             <input id="facebook-link-input" type="url" value="${links.facebook}" placeholder="Facebook URL" class="w-full p-2 border rounded-lg text-text-dark">
+                            <input id="discord-link-input" type="url" value="${links.discord}" placeholder="Discord Server URL" class="w-full p-2 border rounded-lg text-text-dark">
                         </div>
                         <div class="mt-3 flex space-x-2">
                             <button onclick="saveSocialLinks()" class="px-4 py-2 bg-accent-coffee text-white font-semibold rounded-lg hover-darken transition">
@@ -712,7 +872,25 @@
             document.getElementById('edit-about-btn').classList.toggle('hidden', !isAdmin);
             document.getElementById('add-music-btn').classList.toggle('hidden', !isAdmin);
             document.getElementById('add-news-btn')?.classList.toggle('hidden', !isAdmin);
+            document.getElementById('add-partner-btn')?.classList.toggle('hidden', !isAdmin);
         }
+
+        function renderError(message) {
+             document.getElementById('music-list').innerHTML = `<div class="col-span-full flex justify-center items-center p-10 text-xl text-error-red">${message}</div>`;
+             document.getElementById('news-list').innerHTML = `<div class="flex justify-start items-center p-4 text-xl text-error-red">${message}</div>`;
+             document.getElementById('partners-list').innerHTML = `<div class="col-span-full flex justify-center items-center p-4 text-xl text-error-red">${message}</div>`;
+             
+             const aboutEl = document.getElementById('about-content');
+             if(aboutEl) aboutEl.innerHTML = `<p class="text-error-red p-2">${message}</p>`;
+             
+             const authEl = document.getElementById('auth-ui');
+             if(authEl) authEl.innerHTML = `
+                    <div class="flex justify-center items-center h-16 text-gray-500 text-md">
+                        <i class="fas fa-exclamation-triangle mr-3 text-error-red"></i> ${message}
+                    </div>
+                `;
+        }
+
 
         function renderAboutMe() {
             const aboutContentEl = document.getElementById('about-content');
@@ -901,6 +1079,85 @@
                 `;
             }).join('');
         }
+        
+        // RENDER FUNCTION FOR PARTNERS
+        function renderPartners() {
+            const partnersListEl = document.getElementById('partners-list');
+            
+            if (!isAuthReady) {
+                partnersListEl.innerHTML = `<div class="col-span-full flex justify-center items-center p-4 h-24 text-gray-500 text-lg"><i class="fas fa-sync-alt animate-spin-slow mr-3"></i> Loading Partners...</div>`;
+                return;
+            }
+
+            if (!auth) {
+                partnersListEl.innerHTML = `<div class="col-span-full flex justify-center items-center p-4 h-24 text-gray-500 text-lg"><i class="fas fa-exclamation-triangle mr-2 text-error-red"></i> Database not connected.</div>`;
+                return;
+            }
+
+            if (partnersData.length === 0) {
+                const content = isAdmin ? 'No partners listed yet. Click "Add Partner" above to get started.' : 'No official partners to display yet.';
+                partnersListEl.innerHTML = `<div class="col-span-full flex justify-center items-center p-4 h-24 text-xl text-gray-500">${content}</div>`;
+                return;
+            }
+
+            partnersListEl.innerHTML = partnersData.map(partner => {
+                // Admin Edit Mode
+                if (partner.isEditing && isAdmin) {
+                    return `
+                        <div id="partner-item-${partner.id}" class="col-span-1 bg-card-light shadow-lg rounded-xl p-4 border-2 border-accent-coffee/50">
+                            <p class="text-xs text-gray-500 mb-2">ID: ${partner.id}</p>
+                            <input id="edit-partner-name-${partner.id}" type="text" value="${partner.name}" placeholder="Name" class="w-full p-1 border rounded text-text-dark mb-2 font-bold">
+                            <input id="edit-partner-logo-${partner.id}" type="url" value="${partner.logoUrl || ''}" placeholder="Logo URL" class="w-full p-1 border rounded text-text-dark mb-2 text-sm">
+                            <input id="edit-partner-url-${partner.id}" type="url" value="${partner.url}" placeholder="Website URL" class="w-full p-1 border rounded text-text-dark mb-2 text-sm">
+                            <textarea id="edit-partner-description-${partner.id}" rows="2" placeholder="Description" class="w-full p-1 mb-3 border rounded text-text-dark text-sm">${partner.description || ''}</textarea>
+                            
+                            <div class="flex space-x-2">
+                                <button onclick="savePartnerEntry('${partner.id}')" class="flex-grow px-3 py-1 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition">
+                                    <i class="fas fa-check"></i> Save
+                                </button>
+                                <button onclick="togglePartnerEdit('${partner.id}')" class="px-3 py-1 bg-gray-300 text-text-dark text-sm font-semibold rounded-lg hover:bg-gray-400 transition">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Public View Mode
+                const placeholder = `https://placehold.co/150x150/F8F4E3/A0522D?text=${partner.name.substring(0, 3).toUpperCase()}`;
+                
+                return `
+                    <a href="${partner.url}" target="_blank" id="partner-item-${partner.id}" 
+                        class="group bg-card-light shadow-md p-4 rounded-xl flex flex-col items-center justify-between border border-gray-200 transition duration-300 hover:shadow-xl hover:shadow-accent-light/30 transform hover:scale-[1.03]">
+                        
+                        <div class="h-16 w-16 mb-3 flex items-center justify-center border rounded-full overflow-hidden">
+                            <img src="${partner.logoUrl || placeholder}" 
+                                 alt="${partner.name} Logo" 
+                                 class="w-full h-full object-contain p-1"
+                                 onerror="this.onerror=null; this.src='${placeholder}';"
+                            />
+                        </div>
+
+                        <h3 class="text-lg font-bold text-text-dark group-hover:text-accent-coffee">${partner.name}</h3>
+                        <p class="text-xs text-text-dark/70 text-center mt-1 mb-3 h-8 overflow-hidden">${partner.description || 'Partnered for success.'}</p>
+                        
+                        <span class="text-xs text-accent-light font-semibold group-hover:underline">Visit Site <i class="fas fa-external-link-alt ml-1 text-[10px]"></i></span>
+
+                        ${isAdmin ? `
+                            <div class="mt-3 flex space-x-2 w-full">
+                                <button onclick="event.preventDefault(); togglePartnerEdit('${partner.id}')" class="flex-grow px-2 py-1 bg-gray-100 text-text-dark text-xs rounded-lg hover:bg-gray-200 transition">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                <button onclick="event.preventDefault(); deletePartner('${partner.id}')" class="px-2 py-1 bg-error-red text-white text-xs rounded-lg hover:bg-red-700 transition">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        ` : ''}
+                    </a>
+                `;
+            }).join('');
+        }
+
 
         
         function renderAuthUI() {
@@ -982,6 +1239,7 @@
             renderAboutMe();
             renderMusic();
             renderNews(); 
+            renderPartners(); 
             renderAuthUI(); 
         }
     </script>
