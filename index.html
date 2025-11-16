@@ -7,8 +7,7 @@
     <!-- 
         NOTE ON TAILWIND WARNING: The Tailwind CDN is used here because this is a single-file environment.
         In a production deployment, the suggested approach (PostCSS plugin or CLI) should be used.
-    -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    --><script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -56,30 +55,45 @@
 
         /* Utility to preserve whitespace and line breaks in news content */
         .whitespace-pre-wrap {
-            white-space: pre-wrap;
+            white-wrap: pre-wrap;
+        }
+
+        /* Partner Logo Specific Styles */
+        .partner-logo-container {
+            position: relative;
+            width: 64px; /* w-16 */
+            height: 64px; /* h-16 */
+            border-radius: 50%;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e2e8f0; /* gray-300 */
+        }
+
+        .partner-logo-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* This is the key change */
+            object-position: center;
         }
     </style>
 </head>
 <body class="min-h-screen">
 
-    <!-- Responsive Header/Navigation Bar -->
-    <header id="header-container" class="bg-card-light shadow-md p-4 md:p-6 sticky top-0 z-10 border-b border-gray-200">
-        <!-- Content dynamically rendered here -->
-    </header>
+    <!-- Responsive Header/Navigation Bar --><header id="header-container" class="bg-card-light shadow-md p-4 md:p-6 sticky top-0 z-10 border-b border-gray-200">
+        <!-- Content dynamically rendered here --></header>
 
-    <!-- Main Content Area -->
-    <main class="max-w-6xl mx-auto p-6 md:p-10">
+    <!-- Main Content Area --><main class="max-w-6xl mx-auto p-6 md:p-10">
         
-        <!-- Hero Section -->
-        <div class="text-center mb-16 pt-8">
+        <!-- Hero Section --><div class="text-center mb-16 pt-8">
             <h1 class="text-6xl md:text-8xl font-black mb-4 tracking-tighter">
                 <span class="text-transparent bg-clip-text bg-gradient-to-r from-accent-coffee to-accent-light">JINSUN </span> MUSIC
             </h1>
             <p class="text-xl md:text-2xl text-accent-coffee font-semibold">Music • News • Story</p>
         </div>
 
-        <!-- Bio Section -->
-        <section class="mb-20 p-8 bg-card-light rounded-3xl shadow-xl border-l-8 border-accent-coffee">
+        <!-- Bio Section --><section class="mb-20 p-8 bg-card-light rounded-3xl shadow-xl border-l-8 border-accent-coffee">
             <div class="flex justify-between items-start mb-4">
                 <h2 class="text-3xl font-bold text-accent-coffee">About Me</h2>
                 <button id="edit-about-btn" onclick="toggleAboutEdit()" class="hidden text-sm px-3 py-1 bg-gray-100 text-text-dark rounded-lg hover:bg-gray-200 transition">
@@ -87,15 +101,13 @@
                 </button>
             </div>
             <div id="about-content">
-                <!-- About Me text loaded here -->
-                <div id="about-loading-spinner" class="flex justify-center items-center h-24 text-gray-500 text-lg">
+                <!-- About Me text loaded here --><div id="about-loading-spinner" class="flex justify-center items-center h-24 text-gray-500 text-lg">
                     <i class="fas fa-sync-alt animate-spin-slow mr-3"></i> Loading...
                 </div>
             </div>
         </section>
 
-        <!-- Music Section -->
-        <section class="mb-20">
+        <!-- Music Section --><section class="mb-20">
             <div class="flex justify-between items-center mb-8">
                 <h2 class="text-4xl font-bold text-text-dark">Latest Music</h2>
                 <button id="add-music-btn" onclick="toggleAddMusicForm()" class="hidden px-4 py-2 bg-accent-coffee text-white font-semibold rounded-lg hover-darken transition">
@@ -103,8 +115,7 @@
                 </button>
             </div>
 
-            <!-- Add Music Form (Admin Only) -->
-            <div id="add-music-form" class="hidden bg-card-light p-6 rounded-xl shadow-xl mb-8 border border-accent-coffee/50">
+            <!-- Add Music Form (Admin Only) --><div id="add-music-form" class="hidden bg-card-light p-6 rounded-xl shadow-xl mb-8 border border-accent-coffee/50">
                 <h3 class="text-2xl font-bold mb-4 text-accent-coffee">Add New Music Track</h3>
                 <input type="text" id="new-title" placeholder="Title (e.g., Garagara Gong)" class="w-full p-2 mb-3 border rounded-lg focus:ring-accent-coffee focus:border-accent-coffee text-text-dark">
                 <div class="flex space-x-3 mb-4">
@@ -120,15 +131,13 @@
             </div>
 
             <div id="music-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <!-- Music cards loaded here -->
-                <div class="col-span-full flex justify-center items-center h-24 text-gray-500 text-lg">
+                <!-- Music cards loaded here --><div class="col-span-full flex justify-center items-center h-24 text-gray-500 text-lg">
                     <i class="fas fa-sync-alt animate-spin-slow mr-3"></i> Loading Music...
                 </div>
             </div>
         </section>
 
-        <!-- News Section -->
-        <section class="mb-16">
+        <!-- News Section --><section class="mb-16">
             <div class="flex justify-between items-center mb-8">
                 <h2 class="text-4xl font-bold text-text-dark">Latest News</h2>
                 <button id="add-news-btn" onclick="toggleAddNewsForm()" class="hidden px-4 py-2 bg-accent-coffee text-white font-semibold rounded-lg hover-darken transition">
@@ -136,8 +145,7 @@
                 </button>
             </div>
             
-            <!-- Add News Form (Admin Only) -->
-            <div id="add-news-form" class="hidden bg-card-light p-6 rounded-xl shadow-xl mb-8 border border-accent-coffee/50 max-w-4xl mx-auto md:mx-0">
+            <!-- Add News Form (Admin Only) --><div id="add-news-form" class="hidden bg-card-light p-6 rounded-xl shadow-xl mb-8 border border-accent-coffee/50 max-w-4xl mx-auto md:mx-0">
                 <h3 class="text-2xl font-bold mb-4 text-accent-coffee">Create New News Item</h3>
                 <input type="text" id="new-news-title" placeholder="News Headline" class="w-full p-2 mb-3 border rounded-lg focus:ring-accent-coffee focus:border-accent-coffee text-text-dark">
                 <textarea id="new-news-content" placeholder="Full news content/details..." rows="3" class="w-full p-2 mb-4 border rounded-lg focus:ring-accent-coffee focus:border-accent-coffee text-text-dark"></textarea>
@@ -145,20 +153,17 @@
                 <button onclick="addNews()" class="px-5 py-2 bg-accent-coffee text-white font-semibold rounded-lg hover-darken transition">
                     <i class="fas fa-save mr-2"></i> Publish News
                 </button>
-                <!-- Status message area for user feedback -->
-                <p id="news-status-message" class="mt-3 text-sm"></p>
+                <!-- Status message area for user feedback --><p id="news-status-message" class="mt-3 text-sm"></p>
             </div>
 
             <div id="news-list" class="space-y-6 max-w-4xl">
-                <!-- News items loaded here -->
-                 <div class="flex justify-start items-center p-4 h-24 text-gray-500 text-lg">
+                <!-- News items loaded here --><div class="flex justify-start items-center p-4 h-24 text-gray-500 text-lg">
                     <i class="fas fa-sync-alt animate-spin-slow mr-3"></i> Loading News...
                 </div>
             </div>
         </section>
 
-        <!-- Partners Section (NEW) -->
-        <section class="mb-20">
+        <!-- Partners Section (NEW) --><section class="mb-20">
             <div class="flex justify-between items-center mb-8">
                 <h2 class="text-4xl font-bold text-text-dark">Official Partners</h2>
                 <button id="add-partner-btn" onclick="toggleAddPartnerForm()" class="hidden px-4 py-2 bg-accent-coffee text-white font-semibold rounded-lg hover-darken transition">
@@ -166,8 +171,7 @@
                 </button>
             </div>
             
-            <!-- Add Partner Form (Admin Only) -->
-            <div id="add-partner-form" class="hidden bg-card-light p-6 rounded-xl shadow-xl mb-8 border border-accent-coffee/50 max-w-4xl mx-auto md:mx-0">
+            <!-- Add Partner Form (Admin Only) --><div id="add-partner-form" class="hidden bg-card-light p-6 rounded-xl shadow-xl mb-8 border border-accent-coffee/50 max-w-4xl mx-auto md:mx-0">
                 <h3 class="text-2xl font-bold mb-4 text-accent-coffee">Add New Partner</h3>
                 <input type="text" id="new-partner-name" placeholder="Partner Name (e.g., Studio Ghibli)" class="w-full p-2 mb-3 border rounded-lg focus:ring-accent-coffee focus:border-accent-coffee text-text-dark">
                 <input type="url" id="new-partner-logo" placeholder="Logo URL (e.g., https://example.com/logo.png)" class="w-full p-2 mb-3 border rounded-lg focus:ring-accent-coffee focus:border-accent-coffee text-text-dark">
@@ -181,8 +185,7 @@
             </div>
 
             <div id="partners-list" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
-                <!-- Partners loaded here -->
-                 <div class="col-span-full flex justify-center items-center h-24 text-gray-500 text-lg">
+                <!-- Partners loaded here --><div class="col-span-full flex justify-center items-center h-24 text-gray-500 text-lg">
                     <i class="fas fa-sync-alt animate-spin-slow mr-3"></i> Loading Partners...
                 </div>
             </div>
@@ -190,16 +193,13 @@
         
     </main>
 
-    <!-- Footer / User Auth Area -->
-    <footer class="bg-card-light mt-16 p-8 text-center border-t border-gray-300">
+    <!-- Footer / User Auth Area --><footer class="bg-card-light mt-16 p-8 text-center border-t border-gray-300">
         <div id="auth-ui" class="max-w-md mx-auto mb-4 p-4 border rounded-xl shadow-inner bg-background-cream">
-            <!-- Login/Profile UI rendered here -->
-        </div>
+            <!-- Login/Profile UI rendered here --></div>
         <p class="text-text-dark/70 text-sm">&copy; 2025 JinSun Official. All Rights Reserved.</p>
     </footer>
 
-    <!-- Firebase SDKs -->
-    <script type="module">
+    <!-- Firebase SDKs --><script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         // REMOVED sendEmailVerification from imports
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -1130,10 +1130,10 @@
                     <a href="${partner.url}" target="_blank" id="partner-item-${partner.id}" 
                         class="group bg-card-light shadow-md p-4 rounded-xl flex flex-col items-center justify-between border border-gray-200 transition duration-300 hover:shadow-xl hover:shadow-accent-light/30 transform hover:scale-[1.03]">
                         
-                        <div class="h-16 w-16 mb-3 flex items-center justify-center border rounded-full overflow-hidden">
+                        <div class="partner-logo-container mb-3">
                             <img src="${partner.logoUrl || placeholder}" 
                                  alt="${partner.name} Logo" 
-                                 class="w-full h-full object-contain p-1"
+                                 class="partner-logo-image"
                                  onerror="this.onerror=null; this.src='${placeholder}';"
                             />
                         </div>
@@ -1245,4 +1245,4 @@
     </script>
 
 </body>
-</html>
+</html>	
