@@ -84,11 +84,21 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.6);
+            /* Faded gradient background */
+            background: linear-gradient(to bottom right, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.7));
             display: flex;
             justify-content: center;
             align-items: center;
             z-index: 50;
+        }
+        
+        /* NEW: Class to hide scrollbars */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
         }
     </style>
 </head>
@@ -221,12 +231,12 @@
                 <input type="url" id="new-partner-url" placeholder="Website URL (e.g., https://ghibli.jp/)" class="w-full p-2 mb-3 border rounded-lg focus:ring-accent-coffee focus:border-accent-coffee text-text-dark">
                 <textarea id="new-partner-description" placeholder="Short description of the partnership..." rows="2" class="w-full p-2 mb-4 border rounded-lg focus:ring-accent-coffee focus:border-accent-coffee text-text-dark"></textarea>
                 
-                <!-- NEW FIELDS FOR PARTNER-SPECIFIC CONTACT -->
-                <input type="text" id="new-partner-social-label" placeholder="Partner Social Label (e.g., LinkedIn, Twitter, Inquiries Email)" class="w-full p-2 mb-3 border rounded-lg focus:ring-accent-coffee focus:border-accent-coffee text-text-dark">
-                <input type="url" id="new-partner-social-url" placeholder="Partner Social/Contact Link (URL or mailto:)" class="w-full p-2 mb-3 border rounded-lg focus:ring-accent-coffee focus:border-accent-coffee text-text-dark">
-                <!-- END NEW FIELDS -->
+                
 
-                <button onclick="addPartner()" class="px-5 py-2 bg-accent-coffee text-white font-semibold rounded-lg hover-darken transition">
+<!-- Removed social fields - will be added via Edit Modal -->
+                
+
+<button onclick="addPartner()" class="px-5 py-2 bg-accent-coffee text-white font-semibold rounded-lg hover-darken transition">
                     <i class="fas fa-save mr-2"></i> Save Partner
                 </button>
                 <p id="partner-status-message" class="mt-3 text-sm"></p>
@@ -257,6 +267,9 @@
 
 <!-- Partner Details Modal Container -->
     <div id="partner-modal-container"></div>
+    
+    <!-- Generic Edit Modal Container -->
+    <div id="edit-modal-container"></div>
     
 
 <script type="module">
@@ -317,7 +330,8 @@
             discord: "https://discord.gg/jinsun" 
         };
         let currentAuthMode = 'guest_prompt'; // 'guest_prompt', 'login' or 'signup' 
-        let selectedPartner = null; // NEW: State for the partner details modal
+        let selectedPartner = null; // State for the partner details modal
+        let editingItem = null; // { type: 'music'|'news'|'partner', data: {...} }
         
         // Flag to track when authentication is complete and listeners have started
         let isAuthReady = false;
@@ -445,7 +459,7 @@
             onSnapshot(qMusic, (snapshot) => {
                 musicData = [];
                 snapshot.forEach((doc) => {
-                    musicData.push({ id: doc.id, isEditing: false, ...doc.data() });
+                    musicData.push({ id: doc.id, ...doc.data() });
                 });
                 // Sort by year descending (client-side sorting)
                 musicData.sort((a, b) => (b.year || '').localeCompare(a.year || ''));
@@ -460,7 +474,7 @@
             onSnapshot(qNews, (snapshot) => {
                 newsData = [];
                 snapshot.forEach((doc) => {
-                    newsData.push({ id: doc.id, isEditing: false, ...doc.data() });
+                    newsData.push({ id: doc.id, ...doc.data() });
                 });
                 // Sort by timestamp descending (most recent first). Using || 0 for safety.
                 newsData.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)); 
@@ -475,12 +489,13 @@
             onSnapshot(qPartners, (snapshot) => {
                 partnersData = [];
                 snapshot.forEach((doc) => {
-                    partnersData.push({ id: doc.id, isEditing: false, ...doc.data() });
+                    partnersData.push({ id: doc.id, ...doc.data() });
                 });
                 // Sort alphabetically by name (client-side sorting)
                 partnersData.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
                 renderApp();
                 renderPartnerModal(); // Ensure modal state is updated if data changes
+                renderEditModal(); // NEW: Refresh edit modal if data changes
             }, (error) => {
                 console.error("Error reading partners data (Check Security Rules!):", error);
                 renderApp();
@@ -647,25 +662,6 @@
             }
         }
         
-        window.saveMusicEntry = async function(id) {
-            if (!isAdmin || !db) { console.error("Permission or DB denied."); return; }
-            const card = document.getElementById(`music-card-${id}`);
-            const updatedData = {
-                title: card.querySelector(`#edit-title-${id}`).value,
-                year: card.querySelector(`#edit-year-${id}`).value,
-                type: card.querySelector(`#edit-type-${id}`).value,
-                url: card.querySelector(`#edit-url-${id}`).value,
-                description: card.querySelector(`#edit-description-${id}`).value,
-            };
-
-            try {
-                await setDoc(doc(db, PUBLIC_MUSIC_COLLECTION_PATH, id), updatedData);
-                toggleMusicEdit(id); 
-            } catch(e) {
-                console.error("Error saving music entry:", e);
-            }
-        }
-
         window.addNews = async function() {
             const statusEl = document.getElementById('news-status-message');
             statusEl.textContent = ''; 
@@ -724,22 +720,6 @@
             }
         }
 
-        window.saveNewsEntry = async function(id) {
-            if (!isAdmin || !db) { console.error("Permission or DB denied."); return; }
-            const newsItemEl = document.getElementById(`news-item-${id}`);
-            const updatedData = {
-                title: newsItemEl.querySelector(`#edit-news-title-${id}`).value,
-                content: newsItemEl.querySelector(`#edit-news-content-${id}`).value,
-            };
-
-            try {
-                await setDoc(doc(db, PUBLIC_NEWS_COLLECTION_PATH, id), updatedData, { merge: true });
-                toggleNewsEdit(id); 
-            } catch(e) {
-                console.error("Error saving news entry:", e);
-            }
-        }
-
         // NEW: Partner functions
         window.addPartner = async function() {
             const statusEl = document.getElementById('partner-status-message');
@@ -755,11 +735,7 @@
             const logoUrl = document.getElementById('new-partner-logo').value;
             const url = document.getElementById('new-partner-url').value;
             const description = document.getElementById('new-partner-description').value;
-            // NEW: Partner social/contact fields
-            const socialLabel = document.getElementById('new-partner-social-label').value;
-            const socialUrl = document.getElementById('new-partner-social-url').value;
-
-
+            
             if (!name || !url) {
                 statusEl.className = 'mt-3 text-sm text-error-red';
                 statusEl.textContent = 'Partner Name and Website URL are required.';
@@ -769,8 +745,14 @@
             statusEl.className = 'mt-3 text-sm text-blue-600';
             statusEl.textContent = 'Saving partner...';
             
-            // Include new social fields
-            const newPartner = { name, logoUrl, url, description, socialLabel, socialUrl };
+            // Initialize with an empty contacts array
+            const newPartner = { 
+                name, 
+                logoUrl, 
+                url, 
+                description, 
+                contacts: [] 
+            };
             
             try {
                 await addDoc(collection(db, PUBLIC_PARTNERS_COLLECTION_PATH), newPartner);
@@ -779,8 +761,6 @@
                 document.getElementById('new-partner-logo').value = '';
                 document.getElementById('new-partner-url').value = '';
                 document.getElementById('new-partner-description').value = '';
-                document.getElementById('new-partner-social-label').value = '';
-                document.getElementById('new-partner-social-url').value = '';
                 
                 statusEl.className = 'mt-3 text-sm text-green-600';
                 statusEl.textContent = 'Partner saved successfully!';
@@ -804,27 +784,6 @@
             }
         }
 
-        window.savePartnerEntry = async function(id) {
-            if (!isAdmin || !db) { console.error("Permission or DB denied."); return; }
-            const partnerItemEl = document.getElementById(`partner-item-${id}`);
-            const updatedData = {
-                name: partnerItemEl.querySelector(`#edit-partner-name-${id}`).value,
-                logoUrl: partnerItemEl.querySelector(`#edit-partner-logo-${id}`).value,
-                url: partnerItemEl.querySelector(`#edit-partner-url-${id}`).value,
-                description: partnerItemEl.querySelector(`#edit-partner-description-${id}`).value,
-                // NEW: Partner social/contact fields
-                socialLabel: partnerItemEl.querySelector(`#edit-partner-social-label-${id}`).value,
-                socialUrl: partnerItemEl.querySelector(`#edit-partner-social-url-${id}`).value,
-            };
-
-            try {
-                await setDoc(doc(db, PUBLIC_PARTNERS_COLLECTION_PATH, id), updatedData, { merge: true });
-                togglePartnerEdit(id); 
-            } catch(e) {
-                console.error("Error saving partner entry:", e);
-            }
-        }
-        
         // --- UI CONTROL FUNCTIONS ---
         
         window.toggleSocialEdit = function() {
@@ -842,30 +801,10 @@
             form.classList.toggle('hidden');
         }
 
-        window.toggleMusicEdit = function(id) {
-            musicData = musicData.map(track => {
-                const isTarget = track.id === id;
-                return isTarget 
-                    ? { ...track, isEditing: !track.isEditing } 
-                    : { ...track, isEditing: false };
-            });
-            renderApp();
-        }
-
         window.toggleAddNewsForm = function() {
             const form = document.getElementById('add-news-form');
             form.classList.toggle('hidden');
             document.getElementById('news-status-message').textContent = '';
-        }
-
-        window.toggleNewsEdit = function(id) {
-            newsData = newsData.map(item => {
-                 const isTarget = item.id === id;
-                return isTarget 
-                    ? { ...item, isEditing: !item.isEditing } 
-                    : { ...item, isEditing: false };
-            });
-            renderApp();
         }
         
         window.toggleAddPartnerForm = function() {
@@ -874,17 +813,7 @@
             document.getElementById('partner-status-message').textContent = '';
         }
 
-        window.togglePartnerEdit = function(id) {
-            partnersData = partnersData.map(item => {
-                 const isTarget = item.id === id;
-                return isTarget 
-                    ? { ...item, isEditing: !item.isEditing } 
-                    : { ...item, isEditing: false };
-            });
-            renderApp();
-        }
-        
-        // NEW: Modal control functions
+        // --- Partner Details Modal ---
         window.openPartnerModal = function(id) {
             selectedPartner = partnersData.find(p => p.id === id);
             renderPartnerModal();
@@ -894,6 +823,143 @@
             selectedPartner = null;
             renderPartnerModal();
         }
+        
+        // --- NEW EDIT MODAL FUNCTIONS ---
+        window.openEditModal = function(type, id) {
+            let data;
+            switch(type) {
+                case 'music':
+                    data = musicData.find(item => item.id === id);
+                    break;
+                case 'news':
+                    data = newsData.find(item => item.id === id);
+                    break;
+                case 'partner':
+                    data = partnersData.find(item => item.id === id);
+                    break;
+            }
+            if (data) {
+                editingItem = { type, data: { ...data } }; // Store a copy
+                renderEditModal();
+            } else {
+                console.error("Could not find item to edit:", type, id);
+            }
+        }
+
+        window.closeEditModal = function() {
+            editingItem = null;
+            renderEditModal();
+        }
+
+        window.handleModalSave = async function() {
+            if (!editingItem || !isAdmin || !db) {
+                console.error("Save failed: No item selected or no admin/db connection.");
+                return;
+            }
+            
+            const { type, data } = editingItem;
+            const id = data.id;
+            let updatedData = {};
+            let statusEl = document.getElementById('modal-edit-status');
+            
+            try {
+                statusEl.textContent = 'Saving...';
+                statusEl.className = 'text-sm text-blue-600';
+
+                switch(type) {
+                    case 'music':
+                        updatedData = {
+                            title: document.getElementById('modal-edit-title').value,
+                            year: document.getElementById('modal-edit-year').value,
+                            type: document.getElementById('modal-edit-type').value,
+                            url: document.getElementById('modal-edit-url').value,
+                            description: document.getElementById('modal-edit-description').value,
+                        };
+                        await setDoc(doc(db, PUBLIC_MUSIC_COLLECTION_PATH, id), updatedData);
+                        break;
+                    
+                    case 'news':
+                        updatedData = {
+                            title: document.getElementById('modal-edit-news-title').value,
+                            content: document.getElementById('modal-edit-news-content').value,
+                        };
+                        // Use merge: true to update these fields without touching the timestamp
+                        await setDoc(doc(db, PUBLIC_NEWS_COLLECTION_PATH, id), updatedData, { merge: true });
+                        break;
+                        
+                    case 'partner':
+                        // Scrape contacts from the modal
+                        const contacts = [];
+                        const contactList = document.getElementById('modal-contacts-list');
+                        if (contactList) {
+                            const labels = contactList.querySelectorAll('.modal-contact-label');
+                            const urls = contactList.querySelectorAll('.modal-contact-url');
+                            
+                            for (let i = 0; i < labels.length; i++) {
+                                const label = labels[i].value.trim();
+                                const url = urls[i].value.trim();
+                                if (label && url) { // Only save if both fields are filled
+                                    contacts.push({ label, url });
+                                }
+                            }
+                        }
+
+                        updatedData = {
+                            name: document.getElementById('modal-edit-partner-name').value,
+                            logoUrl: document.getElementById('modal-edit-partner-logo').value,
+                            url: document.getElementById('modal-edit-partner-url').value,
+                            description: document.getElementById('modal-edit-partner-description').value,
+                            contacts: contacts // Save the array of contacts
+                        };
+                        await setDoc(doc(db, PUBLIC_PARTNERS_COLLECTION_PATH, id), updatedData);
+                        break;
+                }
+                
+                statusEl.textContent = 'Save Successful!';
+                statusEl.className = 'text-sm text-green-600';
+                
+                // Close modal after a short delay
+                setTimeout(closeEditModal, 1000);
+
+            } catch (e) {
+                console.error("Error saving entry:", e);
+                statusEl.textContent = `Error: ${e.message}`;
+                statusEl.className = 'text-sm text-error-red';
+            }
+        }
+        
+        // NEW: Helper function to add/remove contact fields in the edit modal
+        window.addContactToModal = function() {
+            // Remove the 'no contacts' message if it exists
+            const noContactsMessage = document.getElementById('no-contacts-message');
+            if (noContactsMessage) {
+                noContactsMessage.remove();
+            }
+
+            const list = document.getElementById('modal-contacts-list');
+            const newIndex = list.children.length; // Simple index
+            const contactRow = document.createElement('div');
+            contactRow.className = 'flex space-x-2';
+            contactRow.setAttribute('data-contact-index', newIndex);
+            contactRow.innerHTML = `
+                <input type="text" placeholder="Label (e.g., LinkedIn)" value="" class="w-1/2 p-2 border rounded-lg text-text-dark focus:ring-accent-coffee focus:border-accent-coffee modal-contact-label">
+                <input type="url" placeholder="URL (or mailto:)" value="" class="w-1/2 p-2 border rounded-lg text-text-dark focus:ring-accent-coffee focus:border-accent-coffee modal-contact-url">
+                <button type="button" onclick="removeContactFromModal(this)" class="px-3 py-1 bg-error-red text-white rounded-lg hover:bg-red-700 transition"><i class="fas fa-trash"></i></button>
+            `;
+            list.appendChild(contactRow);
+        }
+
+        window.removeContactFromModal = function(button) {
+            const row = button.parentElement;
+            row.remove();
+            
+            // Check if list is now empty
+            const list = document.getElementById('modal-contacts-list');
+            if (list && list.children.length === 0) {
+                 list.innerHTML = '<p class="text-sm text-gray-500" id="no-contacts-message">No contacts added yet.</p>';
+            }
+        }
+        // --- END NEW EDIT MODAL FUNCTIONS ---
 
         // --- RENDERING FUNCTIONS ---
         
@@ -1029,34 +1095,7 @@
             }
 
             musicListEl.innerHTML = musicData.map(track => {
-                // If in edit mode (only admin can edit)
-                if (track.isEditing && isAdmin) {
-                    return `
-                        <div id="music-card-${track.id}" class="bg-card-light shadow-lg rounded-xl p-6 border-2 border-accent-coffee/50">
-                            <p class="text-xs text-gray-500 mb-2">ID: ${track.id}</p>
-                            <h3 class="text-2xl font-bold mb-1 text-accent-coffee">
-                                <input id="edit-title-${track.id}" type="text" value="${track.title}" class="w-full p-1 border rounded text-text-dark">
-                            </h3>
-                            <div class="flex space-x-2 text-text-dark/70 text-sm mb-3">
-                                <input id="edit-year-${track.id}" type="text" value="${track.year}" class="w-1/3 p-1 border rounded text-text-dark">
-                                <input id="edit-type-${track.id}" type="text" value="${track.type}" class="w-2/3 p-1 border rounded text-text-dark">
-                            </div>
-                            <textarea id="edit-description-${track.id}" rows="3" class="w-full p-1 mb-3 border rounded text-text-dark">${track.description}</textarea>
-                            <input id="edit-url-${track.id}" type="url" value="${track.url}" placeholder="Listen URL" class="w-full p-1 mb-4 border rounded text-text-dark">
-                            
-                            <div class="flex space-x-2">
-                                <button onclick="saveMusicEntry('${track.id}')" class="flex-grow px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition">
-                                    <i class="fas fa-check mr-2"></i> Save
-                                </button>
-                                <button onclick="toggleMusicEdit('${track.id}')" class="px-4 py-2 bg-gray-300 text-text-dark font-semibold rounded-lg hover:bg-gray-400 transition">
-                                    <i class="fas fa-times mr-2"></i> Cancel
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                }
-
-                // If in view mode (public or logged in non-admin)
+                // Public View Mode
                 return `
                     <div id="music-card-${track.id}" class="bg-card-light shadow-lg rounded-xl p-6 transition duration-300 hover:shadow-accent-coffee/30 hover:shadow-2xl border border-gray-200">
                         <h3 class="text-2xl font-bold mb-1 text-accent-coffee">${track.title}</h3>
@@ -1074,12 +1113,12 @@
                         `}
 
                         ${isAdmin ? `
-                            <div class="mt-4 flex space-x-2">
-                                <button onclick="toggleMusicEdit('${track.id}')" class="flex-grow px-3 py-1 bg-gray-100 text-text-dark rounded-lg hover:bg-gray-200 transition">
+                            <div class="mt-4 pt-4 border-t border-gray-200 flex space-x-2">
+                                <button onclick="openEditModal('music', '${track.id}')" class="flex-grow px-4 py-2 bg-gray-100 text-text-dark text-sm font-semibold rounded-lg hover:bg-gray-200 transition">
                                     <i class="fas fa-edit mr-1"></i> Edit
                                 </button>
-                                <button onclick="deleteMusic('${track.id}')" class="px-3 py-1 bg-error-red text-white rounded-lg hover:bg-red-700 transition">
-                                    <i class="fas fa-trash-alt"></i>
+                                <button onclick="deleteMusic('${track.id}')" class="px-4 py-2 bg-error-red text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition">
+                                    <i class="fas fa-trash-alt mr-1"></i> Delete
                                 </button>
                             </div>
                         ` : ''}
@@ -1121,26 +1160,6 @@
                 const displayDate = formatDate(item.timestamp);
                 // Determine border color based on index for variety
                 const borderColor = index % 2 === 0 ? 'border-accent-coffee' : 'border-accent-light';
-
-                // Admin Edit Mode
-                if (item.isEditing && isAdmin) {
-                    return `
-                        <div id="news-item-${item.id}" class="bg-card-light shadow-lg p-6 rounded-xl border-l-4 ${borderColor} border-2 border-accent-coffee/50">
-                            <p class="text-xs text-gray-500 mb-2">ID: ${item.id}</p>
-                            <input id="edit-news-title-${item.id}" type="text" value="${item.title}" class="text-2xl font-bold mb-2 w-full p-2 border rounded-lg text-text-dark focus:ring-accent-coffee focus:border-accent-coffee">
-                            <textarea id="edit-news-content-${item.id}" rows="4" class="w-full p-2 mb-3 border rounded-lg text-text-dark focus:ring-accent-coffee focus:border-accent-coffee">${item.content}</textarea>
-                            
-                            <div class="flex space-x-2">
-                                <button onclick="saveNewsEntry('${item.id}')" class="flex-grow px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition">
-                                    <i class="fas fa-check mr-2"></i> Save Changes
-                                </button>
-                                <button onclick="toggleNewsEdit('${item.id}')" class="px-4 py-2 bg-gray-300 text-text-dark font-semibold rounded-lg hover:bg-gray-400 transition">
-                                    <i class="fas fa-times mr-2"></i> Cancel
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                }
                 
                 // Public View Mode
                 return `
@@ -1149,12 +1168,12 @@
                         <h3 class="text-2xl font-bold mb-2 text-text-dark">${item.title}</h3>
                         <p class="text-text-dark/80 leading-relaxed whitespace-pre-wrap">${item.content}</p>
                         ${isAdmin ? `
-                            <div class="mt-4 flex space-x-2">
-                                <button onclick="toggleNewsEdit('${item.id}')" class="flex-grow px-3 py-1 bg-gray-100 text-text-dark rounded-lg hover:bg-gray-200 transition">
+                            <div class="mt-4 pt-4 border-t border-gray-200 flex space-x-2">
+                                <button onclick="openEditModal('news', '${item.id}')" class="flex-grow px-4 py-2 bg-gray-100 text-text-dark text-sm font-semibold rounded-lg hover:bg-gray-200 transition">
                                     <i class="fas fa-edit mr-1"></i> Edit
                                 </button>
-                                <button onclick="deleteNews('${item.id}')" class="px-3 py-1 bg-error-red text-white rounded-lg hover:bg-red-700 transition">
-                                    <i class="fas fa-trash-alt"></i> Delete
+                                <button onclick="deleteNews('${item.id}')" class="px-4 py-2 bg-error-red text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition">
+                                    <i class="fas fa-trash-alt mr-1"></i> Delete
                                 </button>
                             </div>
                         ` : ''}
@@ -1188,34 +1207,7 @@
             }
 
             partnersListEl.innerHTML = displayPartners.map(partner => {
-                // Admin Edit Mode
-                if (partner.isEditing && isAdmin) {
-                    return `
-                        <div id="partner-item-${partner.id}" class="col-span-1 bg-card-light shadow-lg rounded-xl p-4 border-2 border-accent-coffee/50">
-                            <p class="text-xs text-gray-500 mb-2">ID: ${partner.id}</p>
-                            <input id="edit-partner-name-${partner.id}" type="text" value="${partner.name}" placeholder="Name" class="w-full p-1 border rounded text-text-dark mb-2 font-bold">
-                            <input id="edit-partner-logo-${partner.id}" type="url" value="${partner.logoUrl || ''}" placeholder="Logo URL" class="w-full p-1 border rounded text-text-dark mb-2 text-sm">
-                            <input id="edit-partner-url-${partner.id}" type="url" value="${partner.url}" placeholder="Website URL" class="w-full p-1 border rounded text-text-dark mb-2 text-sm">
-                            <textarea id="edit-partner-description-${partner.id}" rows="2" placeholder="Description" class="w-full p-1 mb-2 border rounded text-text-dark text-sm">${partner.description || ''}</textarea>
-                            
-                            <!-- EDIT FIELDS FOR PARTNER-SPECIFIC CONTACT -->
-                            <input id="edit-partner-social-label-${partner.id}" type="text" value="${partner.socialLabel || ''}" placeholder="Social Label" class="w-full p-1 border rounded text-text-dark mb-2 text-sm">
-                            <input id="edit-partner-social-url-${partner.id}" type="url" value="${partner.socialUrl || ''}" placeholder="Social URL" class="w-full p-1 border rounded text-text-dark mb-3 text-sm">
-                            <!-- END EDIT FIELDS -->
-
-                            <div class="flex space-x-2">
-                                <button onclick="savePartnerEntry('${partner.id}')" class="flex-grow px-3 py-1 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition">
-                                    <i class="fas fa-check"></i> Save
-                                </button>
-                                <button onclick="togglePartnerEdit('${partner.id}')" class="px-3 py-1 bg-gray-300 text-text-dark text-sm font-semibold rounded-lg hover:bg-gray-400 transition">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                }
-
-                // Public View Mode (UPDATED: Changed <a> to <div> and added onclick)
+                // Public View Mode
                 const placeholder = `https://placehold.co/150x150/F8F4E3/A0522D?text=${partner.name.substring(0, 3).toUpperCase()}`;
                 
                 return `
@@ -1237,11 +1229,11 @@
                         <span class="text-xs text-accent-light font-semibold group-hover:underline">View Partnership Details <i class="fas fa-info-circle ml-1 text-[10px]"></i></span>
 
                         ${isAdmin ? `
-                            <div class="mt-3 flex space-x-2 w-full">
-                                <button onclick="event.stopPropagation(); togglePartnerEdit('${partner.id}')" class="flex-grow px-2 py-1 bg-gray-100 text-text-dark text-xs rounded-lg hover:bg-gray-200 transition">
-                                    <i class="fas fa-edit"></i> Edit
+                            <div class="mt-3 pt-3 border-t border-gray-100 flex space-x-2 w-full">
+                                <button onclick="event.stopPropagation(); openEditModal('partner', '${partner.id}')" class="flex-grow px-3 py-2 bg-gray-100 text-text-dark text-sm font-semibold rounded-lg hover:bg-gray-200 transition">
+                                    <i class="fas fa-edit mr-1"></i> Edit
                                 </button>
-                                <button onclick="event.stopPropagation(); deletePartner('${partner.id}')" class="px-2 py-1 bg-error-red text-white text-xs rounded-lg hover:bg-red-700 transition">
+                                <button onclick="event.stopPropagation(); deletePartner('${partner.id}')" class="px-3 py-2 bg-error-red text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
                             </div>
@@ -1251,7 +1243,7 @@
             }).join('');
         }
 
-        // NEW: RENDER FUNCTION FOR PARTNER MODAL (UPDATED to show Partner's social)
+        // RENDER FUNCTION FOR PARTNER MODAL
         function renderPartnerModal() {
             const modalContainer = document.getElementById('partner-modal-container');
 
@@ -1265,22 +1257,31 @@
             const placeholder = `https://placehold.co/150x150/F8F4E3/A0522D?text=${partner.name.substring(0, 3).toUpperCase()}`;
             
             // Conditional HTML block for partner's specific contact information
-            const partnerSocialSection = partner.socialUrl ? `
-                <h3 class="text-xl font-semibold text-text-dark border-b border-gray-200 pb-2 mb-4">Contact ${partner.name}</h3>
-                <div class="mb-6 text-center">
-                    <a href="${partner.socialUrl}" target="_blank" class="inline-block w-full md:w-auto px-5 py-2 bg-accent-light text-text-dark font-semibold rounded-lg hover:bg-accent-coffee hover:text-white transition">
-                        <i class="fas fa-link mr-2"></i> ${partner.socialLabel || 'Official Contact Link'}
+            let partnerSocialSection = '';
+            if (partner.contacts && partner.contacts.length > 0) {
+                const contactLinks = partner.contacts.map(contact => `
+                    <a href="${contact.url}" target="_blank" class="inline-block w-full sm:w-auto px-5 py-2 bg-accent-light text-text-dark font-semibold rounded-lg hover:bg-accent-coffee hover:text-white transition">
+                        <i class="fas fa-link mr-2"></i> ${contact.label || 'Contact Link'}
                     </a>
-                </div>
-            ` : `
-                <h3 class="text-xl font-semibold text-text-dark border-b border-gray-200 pb-2 mb-4">Contact Information</h3>
-                <p class="text-center text-sm text-gray-500 mb-6">No direct contact link provided for this partner.</p>
-            `;
+                `).join('');
+                
+                partnerSocialSection = `
+                    <h3 class="text-xl font-semibold text-text-dark border-b border-gray-200 pb-2 mb-4">Contact ${partner.name}</h3>
+                    <div class="mb-6 flex flex-wrap justify-center gap-3">
+                        ${contactLinks}
+                    </div>
+                `;
+            } else {
+                partnerSocialSection = `
+                    <h3 class="text-xl font-semibold text-text-dark border-b border-gray-200 pb-2 mb-4">Contact Information</h3>
+                    <p class="text-center text-sm text-gray-500 mb-6">No direct contact links provided for this partner.</p>
+                `;
+            }
 
 
             modalContainer.innerHTML = `
                 <div class="modal-overlay" onclick="closePartnerModal()">
-                    <div class="bg-card-light p-8 rounded-xl shadow-2xl max-w-lg w-11/12 transform transition-all duration-300 scale-100" onclick="event.stopPropagation()">
+                    <div class="bg-card-light p-8 rounded-2xl shadow-2xl max-w-lg w-11/12 max-h-[90vh] overflow-y-auto hide-scrollbar" onclick="event.stopPropagation()">
                         
                         <div class="flex flex-col items-center mb-6">
                             <div class="partner-logo-container w-20 h-20 mb-3 border-4 border-accent-light">
@@ -1306,12 +1307,131 @@
                             </div>
                         ` : ''}
 
-                        <!-- PARTNER SPECIFIC CONTACT SECTION -->
                         ${partnerSocialSection}
                         
                         <button onclick="closePartnerModal()" class="mt-6 w-full py-3 bg-gray-300 text-text-dark font-semibold rounded-lg hover:bg-gray-400 transition">
                             Close Details
                         </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // NEW: RENDER FUNCTION FOR GENERIC EDIT MODAL
+        function renderEditModal() {
+            const modalContainer = document.getElementById('edit-modal-container');
+            if (!editingItem) {
+                modalContainer.innerHTML = '';
+                return;
+            }
+
+            const { type, data } = editingItem;
+            let formTitle = '';
+            let formFields = '';
+
+            // Ensure data fields are gracefully handled if null/undefined
+            const safe = (val) => val || '';
+
+            // Build the form based on the item type
+            switch(type) {
+                case 'music':
+                    formTitle = 'Edit Music Track';
+                    formFields = `
+                        <div class="space-y-3">
+                            <label class="block text-sm font-medium text-text-dark">Title</label>
+                            <input id="modal-edit-title" type="text" value="${safe(data.title)}" class="w-full p-2 border rounded-lg text-text-dark focus:ring-accent-coffee focus:border-accent-coffee">
+                            
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-text-dark">Year</label>
+                                    <input id="modal-edit-year" type="text" value="${safe(data.year)}" class="w-full p-2 border rounded-lg text-text-dark focus:ring-accent-coffee focus:border-accent-coffee">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-text-dark">Type</label>
+                                    <input id="modal-edit-type" type="text" value="${safe(data.type)}" class="w-full p-2 border rounded-lg text-text-dark focus:ring-accent-coffee focus:border-accent-coffee">
+                                </div>
+                            </div>
+                            
+                            <label class="block text-sm font-medium text-text-dark">Listen URL</label>
+                            <input id="modal-edit-url" type="url" value="${safe(data.url)}" class="w-full p-2 border rounded-lg text-text-dark focus:ring-accent-coffee focus:border-accent-coffee">
+                            
+                            <label class="block text-sm font-medium text-text-dark">Description</label>
+                            <textarea id="modal-edit-description" rows="3" class="w-full p-2 border rounded-lg text-text-dark focus:ring-accent-coffee focus:border-accent-coffee">${safe(data.description)}</textarea>
+                        </div>
+                    `;
+                    break;
+                
+                case 'news':
+                    formTitle = 'Edit News Item';
+                    formFields = `
+                        <div class="space-y-3">
+                            <label class="block text-sm font-medium text-text-dark">Headline</label>
+                            <input id="modal-edit-news-title" type="text" value="${safe(data.title)}" class="w-full p-2 border rounded-lg text-text-dark focus:ring-accent-coffee focus:border-accent-coffee">
+                            
+                            <label class="block text-sm font-medium text-text-dark">Content</label>
+                            <textarea id="modal-edit-news-content" rows="5" class="w-full p-2 border rounded-lg text-text-dark focus:ring-accent-coffee focus:border-accent-coffee">${safe(data.content)}</textarea>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'partner':
+                    formTitle = 'Edit Partner';
+                    formFields = `
+                        <div class="space-y-3">
+                            <label class="block text-sm font-medium text-text-dark">Partner Name</label>
+                            <input id="modal-edit-partner-name" type="text" value="${safe(data.name)}" class="w-full p-2 border rounded-lg text-text-dark focus:ring-accent-coffee focus:border-accent-coffee">
+                            
+                            <label class="block text-sm font-medium text-text-dark">Logo URL</label>
+                            <input id="modal-edit-partner-logo" type="url" value="${safe(data.logoUrl)}" class="w-full p-2 border rounded-lg text-text-dark focus:ring-accent-coffee focus:border-accent-coffee">
+                            
+                            <label class="block text-sm font-medium text-text-dark">Website URL</label>
+                            <input id="modal-edit-partner-url" type="url" value="${safe(data.url)}" class="w-full p-2 border rounded-lg text-text-dark focus:ring-accent-coffee focus:border-accent-coffee">
+                            
+                            <label class="block text-sm font-medium text-text-dark">Description</label>
+                            <textarea id="modal-edit-partner-description" rows="3" class="w-full p-2 border rounded-lg text-text-dark focus:ring-accent-coffee focus:border-accent-coffee">${safe(data.description)}</textarea>
+                            
+                            <div class="mt-4 pt-4 border-t border-gray-200">
+                                <div class="flex justify-between items-center mb-2">
+                                    <h4 class="text-md font-semibold text-text-dark">Partner Contacts</h4>
+                                    <button type="button" onclick="addContactToModal()" class="px-3 py-1 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition">
+                                        <i class="fas fa-plus mr-1"></i> Add
+                                    </button>
+                                </div>
+                                <div id="modal-contacts-list" class="space-y-2 p-3 bg-background-cream rounded-lg border max-h-32 overflow-y-auto hide-scrollbar">
+                                    ${ (data.contacts && data.contacts.length > 0) ? data.contacts.map((contact, index) => `
+                                        <div class="flex space-x-2" data-contact-index="${index}">
+                                            <input type="text" placeholder="Label (e.g., LinkedIn)" value="${safe(contact.label)}" class="w-1/2 p-2 border rounded-lg text-text-dark focus:ring-accent-coffee focus:border-accent-coffee modal-contact-label">
+                                            <input type="url" placeholder="URL (or mailto:)" value="${safe(contact.url)}" class="w-1/2 p-2 border rounded-lg text-text-dark focus:ring-accent-coffee focus:border-accent-coffee modal-contact-url">
+                                            <button type="button" onclick="removeContactFromModal(this)" class="px-3 py-1 bg-error-red text-white rounded-lg hover:bg-red-700 transition"><i class="fas fa-trash"></i></button>
+                                        </div>
+                                    `).join('') : '<p class="text-sm text-gray-500" id="no-contacts-message">No contacts added yet.</p>' }
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+            }
+
+            modalContainer.innerHTML = `
+                <div class="modal-overlay" onclick="closeEditModal()">
+                    <div class="bg-card-light p-8 rounded-2xl shadow-2xl max-w-lg w-11/12 max-h-[90vh] overflow-y-auto hide-scrollbar" onclick="event.stopPropagation()">
+                        <h2 class="text-3xl font-bold text-accent-coffee mb-4 border-b border-gray-200 pb-4">${formTitle}</h2>
+                        <p class="text-xs text-gray-500 mb-4">ID: ${data.id}</p>
+                        
+                        <div class="mb-4">
+                            ${formFields}
+                        </div>
+                        
+                        <p id="modal-edit-status" class="text-sm mb-4"></p>
+                        
+                        <div class="flex space-x-2">
+                            <button onclick="handleModalSave()" class="flex-grow px-5 py-2 bg-accent-coffee text-white font-semibold rounded-lg hover-darken transition">
+                                <i class="fas fa-save mr-2"></i> Save Changes
+                            </button>
+                            <button onclick="closeEditModal()" class="px-5 py-2 bg-gray-300 text-text-dark font-semibold rounded-lg hover:bg-gray-400 transition">
+                                <i class="fas fa-times mr-2"></i> Cancel
+                            </button>
+                        </div>
                     </div>
                 </div>
             `;
@@ -1398,8 +1518,8 @@
             renderNews(); 
             renderPartners(); 
             renderAuthUI(); 
-            // Note: renderPartnerModal is called by the onSnapshot listener for partners data, 
-            // and open/close functions, not by renderApp directly, to ensure its state is managed independently.
+            renderPartnerModal();
+            renderEditModal();
         }
     </script>
 
