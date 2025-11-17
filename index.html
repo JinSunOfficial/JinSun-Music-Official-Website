@@ -4,10 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JinSun Official</title>
-    <!-- 
-        NOTE ON TAILWIND WARNING: The Tailwind CDN is used here because this is a single-file environment.
-        In a production deployment, the suggested approach (PostCSS plugin or CLI) should be used.
-    --><script src="https://cdn.tailwindcss.com"></script>
+    
+
+<script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -30,7 +29,7 @@
     </script>
     <style>
         /* Import Inter font and Font Awesome for icons */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght+100..900&display=swap');
         @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css');
         
         /* Apply custom cream background and coffee text colors */
@@ -58,7 +57,7 @@
             white-wrap: pre-wrap;
         }
 
-        /* Partner Logo Specific Styles */
+        /* Partner Logo Specific Styles (Ensures image is cropped to fill the circle) */
         .partner-logo-container {
             position: relative;
             width: 64px; /* w-16 */
@@ -74,26 +73,50 @@
         .partner-logo-image {
             width: 100%;
             height: 100%;
-            object-fit: cover; /* This is the key change */
+            object-fit: cover; /* Cropping property */
             object-position: center;
+        }
+        
+        /* Modal Overlay Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
         }
     </style>
 </head>
 <body class="min-h-screen">
 
-    <!-- Responsive Header/Navigation Bar --><header id="header-container" class="bg-card-light shadow-md p-4 md:p-6 sticky top-0 z-10 border-b border-gray-200">
-        <!-- Content dynamically rendered here --></header>
+    
 
-    <!-- Main Content Area --><main class="max-w-6xl mx-auto p-6 md:p-10">
+<header id="header-container" class="bg-card-light shadow-md p-4 md:p-6 sticky top-0 z-10 border-b border-gray-200">
         
-        <!-- Hero Section --><div class="text-center mb-16 pt-8">
+
+</header>
+
+    
+
+<main class="max-w-6xl mx-auto p-6 md:p-10">
+        
+        
+
+<div class="text-center mb-16 pt-8">
             <h1 class="text-6xl md:text-8xl font-black mb-4 tracking-tighter">
                 <span class="text-transparent bg-clip-text bg-gradient-to-r from-accent-coffee to-accent-light">JINSUN </span> MUSIC
             </h1>
             <p class="text-xl md:text-2xl text-accent-coffee font-semibold">Music • News • Story</p>
         </div>
 
-        <!-- Bio Section --><section class="mb-20 p-8 bg-card-light rounded-3xl shadow-xl border-l-8 border-accent-coffee">
+        
+
+<section class="mb-20 p-8 bg-card-light rounded-3xl shadow-xl border-l-8 border-accent-coffee">
             <div class="flex justify-between items-start mb-4">
                 <h2 class="text-3xl font-bold text-accent-coffee">About Me</h2>
                 <button id="edit-about-btn" onclick="toggleAboutEdit()" class="hidden text-sm px-3 py-1 bg-gray-100 text-text-dark rounded-lg hover:bg-gray-200 transition">
@@ -101,13 +124,17 @@
                 </button>
             </div>
             <div id="about-content">
-                <!-- About Me text loaded here --><div id="about-loading-spinner" class="flex justify-center items-center h-24 text-gray-500 text-lg">
+                
+
+<div id="about-loading-spinner" class="flex justify-center items-center h-24 text-gray-500 text-lg">
                     <i class="fas fa-sync-alt animate-spin-slow mr-3"></i> Loading...
                 </div>
             </div>
         </section>
 
-        <!-- Music Section --><section class="mb-20">
+        
+
+<section class="mb-20">
             <div class="flex justify-between items-center mb-8">
                 <h2 class="text-4xl font-bold text-text-dark">Latest Music</h2>
                 <button id="add-music-btn" onclick="toggleAddMusicForm()" class="hidden px-4 py-2 bg-accent-coffee text-white font-semibold rounded-lg hover-darken transition">
@@ -115,7 +142,9 @@
                 </button>
             </div>
 
-            <!-- Add Music Form (Admin Only) --><div id="add-music-form" class="hidden bg-card-light p-6 rounded-xl shadow-xl mb-8 border border-accent-coffee/50">
+            
+
+<div id="add-music-form" class="hidden bg-card-light p-6 rounded-xl shadow-xl mb-8 border border-accent-coffee/50">
                 <h3 class="text-2xl font-bold mb-4 text-accent-coffee">Add New Music Track</h3>
                 <input type="text" id="new-title" placeholder="Title (e.g., Garagara Gong)" class="w-full p-2 mb-3 border rounded-lg focus:ring-accent-coffee focus:border-accent-coffee text-text-dark">
                 <div class="flex space-x-3 mb-4">
@@ -131,13 +160,17 @@
             </div>
 
             <div id="music-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <!-- Music cards loaded here --><div class="col-span-full flex justify-center items-center h-24 text-gray-500 text-lg">
+                
+
+<div class="col-span-full flex justify-center items-center h-24 text-gray-500 text-lg">
                     <i class="fas fa-sync-alt animate-spin-slow mr-3"></i> Loading Music...
                 </div>
             </div>
         </section>
 
-        <!-- News Section --><section class="mb-16">
+        
+
+<section class="mb-16">
             <div class="flex justify-between items-center mb-8">
                 <h2 class="text-4xl font-bold text-text-dark">Latest News</h2>
                 <button id="add-news-btn" onclick="toggleAddNewsForm()" class="hidden px-4 py-2 bg-accent-coffee text-white font-semibold rounded-lg hover-darken transition">
@@ -145,7 +178,9 @@
                 </button>
             </div>
             
-            <!-- Add News Form (Admin Only) --><div id="add-news-form" class="hidden bg-card-light p-6 rounded-xl shadow-xl mb-8 border border-accent-coffee/50 max-w-4xl mx-auto md:mx-0">
+            
+
+<div id="add-news-form" class="hidden bg-card-light p-6 rounded-xl shadow-xl mb-8 border border-accent-coffee/50 max-w-4xl mx-auto md:mx-0">
                 <h3 class="text-2xl font-bold mb-4 text-accent-coffee">Create New News Item</h3>
                 <input type="text" id="new-news-title" placeholder="News Headline" class="w-full p-2 mb-3 border rounded-lg focus:ring-accent-coffee focus:border-accent-coffee text-text-dark">
                 <textarea id="new-news-content" placeholder="Full news content/details..." rows="3" class="w-full p-2 mb-4 border rounded-lg focus:ring-accent-coffee focus:border-accent-coffee text-text-dark"></textarea>
@@ -153,17 +188,23 @@
                 <button onclick="addNews()" class="px-5 py-2 bg-accent-coffee text-white font-semibold rounded-lg hover-darken transition">
                     <i class="fas fa-save mr-2"></i> Publish News
                 </button>
-                <!-- Status message area for user feedback --><p id="news-status-message" class="mt-3 text-sm"></p>
+                
+
+<p id="news-status-message" class="mt-3 text-sm"></p>
             </div>
 
             <div id="news-list" class="space-y-6 max-w-4xl">
-                <!-- News items loaded here --><div class="flex justify-start items-center p-4 h-24 text-gray-500 text-lg">
+                
+
+<div class="flex justify-start items-center p-4 h-24 text-gray-500 text-lg">
                     <i class="fas fa-sync-alt animate-spin-slow mr-3"></i> Loading News...
                 </div>
             </div>
         </section>
 
-        <!-- Partners Section (NEW) --><section class="mb-20">
+        
+
+<section class="mb-20">
             <div class="flex justify-between items-center mb-8">
                 <h2 class="text-4xl font-bold text-text-dark">Official Partners</h2>
                 <button id="add-partner-btn" onclick="toggleAddPartnerForm()" class="hidden px-4 py-2 bg-accent-coffee text-white font-semibold rounded-lg hover-darken transition">
@@ -171,13 +212,20 @@
                 </button>
             </div>
             
-            <!-- Add Partner Form (Admin Only) --><div id="add-partner-form" class="hidden bg-card-light p-6 rounded-xl shadow-xl mb-8 border border-accent-coffee/50 max-w-4xl mx-auto md:mx-0">
+            
+
+<div id="add-partner-form" class="hidden bg-card-light p-6 rounded-xl shadow-xl mb-8 border border-accent-coffee/50 max-w-4xl mx-auto md:mx-0">
                 <h3 class="text-2xl font-bold mb-4 text-accent-coffee">Add New Partner</h3>
                 <input type="text" id="new-partner-name" placeholder="Partner Name (e.g., Studio Ghibli)" class="w-full p-2 mb-3 border rounded-lg focus:ring-accent-coffee focus:border-accent-coffee text-text-dark">
-                <input type="url" id="new-partner-logo" placeholder="Logo URL (e.g., https://example.com/logo.png)" class="w-full p-2 mb-3 border rounded-lg focus:ring-accent-coffee focus:border-accent-coffee text-text-dark">
+                <input type="url" id="new-partner-logo" placeholder="Logo URL (Required to display)" class="w-full p-2 mb-3 border rounded-lg focus:ring-accent-coffee focus:border-accent-coffee text-text-dark">
                 <input type="url" id="new-partner-url" placeholder="Website URL (e.g., https://ghibli.jp/)" class="w-full p-2 mb-3 border rounded-lg focus:ring-accent-coffee focus:border-accent-coffee text-text-dark">
                 <textarea id="new-partner-description" placeholder="Short description of the partnership..." rows="2" class="w-full p-2 mb-4 border rounded-lg focus:ring-accent-coffee focus:border-accent-coffee text-text-dark"></textarea>
                 
+                <!-- NEW FIELDS FOR PARTNER-SPECIFIC CONTACT -->
+                <input type="text" id="new-partner-social-label" placeholder="Partner Social Label (e.g., LinkedIn, Twitter, Inquiries Email)" class="w-full p-2 mb-3 border rounded-lg focus:ring-accent-coffee focus:border-accent-coffee text-text-dark">
+                <input type="url" id="new-partner-social-url" placeholder="Partner Social/Contact Link (URL or mailto:)" class="w-full p-2 mb-3 border rounded-lg focus:ring-accent-coffee focus:border-accent-coffee text-text-dark">
+                <!-- END NEW FIELDS -->
+
                 <button onclick="addPartner()" class="px-5 py-2 bg-accent-coffee text-white font-semibold rounded-lg hover-darken transition">
                     <i class="fas fa-save mr-2"></i> Save Partner
                 </button>
@@ -185,7 +233,9 @@
             </div>
 
             <div id="partners-list" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
-                <!-- Partners loaded here --><div class="col-span-full flex justify-center items-center h-24 text-gray-500 text-lg">
+                
+
+<div class="col-span-full flex justify-center items-center h-24 text-gray-500 text-lg">
                     <i class="fas fa-sync-alt animate-spin-slow mr-3"></i> Loading Partners...
                 </div>
             </div>
@@ -193,13 +243,23 @@
         
     </main>
 
-    <!-- Footer / User Auth Area --><footer class="bg-card-light mt-16 p-8 text-center border-t border-gray-300">
+    
+
+<footer class="bg-card-light mt-16 p-8 text-center border-t border-gray-300">
         <div id="auth-ui" class="max-w-md mx-auto mb-4 p-4 border rounded-xl shadow-inner bg-background-cream">
-            <!-- Login/Profile UI rendered here --></div>
+            
+
+</div>
         <p class="text-text-dark/70 text-sm">&copy; 2025 JinSun Official. All Rights Reserved.</p>
     </footer>
 
-    <!-- Firebase SDKs --><script type="module">
+    
+
+<!-- Partner Details Modal Container -->
+    <div id="partner-modal-container"></div>
+    
+
+<script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         // REMOVED sendEmailVerification from imports
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -211,13 +271,13 @@
 
         // --- FIREBASE CONFIGURATION (INJECTED DIRECTLY) ---
         // This configuration object was provided by the user.
-        // The API key is heavily obfuscated by splitting it into 5 parts and scrambling the order.
+        // The API key is heavily obfuscated by splitting it into 5 parts and scrambling the order
         const keySegments = [
             { part: "IJStPJ9u", order: 2 },  // Part 3
             { part: "SRZXl1Q", order: 4 },   // Part 5
             { part: "AIzaSyCx", order: 0 },  // Part 1
             { part: "0XzKZyz2", order: 1 },  // Part 2
-            { part: "cbb6wYMk", order: 3 }   // Part 5
+            { part: "cbb6wYMk", order: 3 }   // Part 4
         ];
         
         // Reassemble the key by sorting the array by the 'order' property and joining the 'part' strings
@@ -257,6 +317,7 @@
             discord: "https://discord.gg/jinsun" 
         };
         let currentAuthMode = 'guest_prompt'; // 'guest_prompt', 'login' or 'signup' 
+        let selectedPartner = null; // NEW: State for the partner details modal
         
         // Flag to track when authentication is complete and listeners have started
         let isAuthReady = false;
@@ -419,6 +480,7 @@
                 // Sort alphabetically by name (client-side sorting)
                 partnersData.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
                 renderApp();
+                renderPartnerModal(); // Ensure modal state is updated if data changes
             }, (error) => {
                 console.error("Error reading partners data (Check Security Rules!):", error);
                 renderApp();
@@ -693,6 +755,10 @@
             const logoUrl = document.getElementById('new-partner-logo').value;
             const url = document.getElementById('new-partner-url').value;
             const description = document.getElementById('new-partner-description').value;
+            // NEW: Partner social/contact fields
+            const socialLabel = document.getElementById('new-partner-social-label').value;
+            const socialUrl = document.getElementById('new-partner-social-url').value;
+
 
             if (!name || !url) {
                 statusEl.className = 'mt-3 text-sm text-error-red';
@@ -703,7 +769,8 @@
             statusEl.className = 'mt-3 text-sm text-blue-600';
             statusEl.textContent = 'Saving partner...';
             
-            const newPartner = { name, logoUrl, url, description };
+            // Include new social fields
+            const newPartner = { name, logoUrl, url, description, socialLabel, socialUrl };
             
             try {
                 await addDoc(collection(db, PUBLIC_PARTNERS_COLLECTION_PATH), newPartner);
@@ -712,6 +779,8 @@
                 document.getElementById('new-partner-logo').value = '';
                 document.getElementById('new-partner-url').value = '';
                 document.getElementById('new-partner-description').value = '';
+                document.getElementById('new-partner-social-label').value = '';
+                document.getElementById('new-partner-social-url').value = '';
                 
                 statusEl.className = 'mt-3 text-sm text-green-600';
                 statusEl.textContent = 'Partner saved successfully!';
@@ -743,6 +812,9 @@
                 logoUrl: partnerItemEl.querySelector(`#edit-partner-logo-${id}`).value,
                 url: partnerItemEl.querySelector(`#edit-partner-url-${id}`).value,
                 description: partnerItemEl.querySelector(`#edit-partner-description-${id}`).value,
+                // NEW: Partner social/contact fields
+                socialLabel: partnerItemEl.querySelector(`#edit-partner-social-label-${id}`).value,
+                socialUrl: partnerItemEl.querySelector(`#edit-partner-social-url-${id}`).value,
             };
 
             try {
@@ -810,6 +882,17 @@
                     : { ...item, isEditing: false };
             });
             renderApp();
+        }
+        
+        // NEW: Modal control functions
+        window.openPartnerModal = function(id) {
+            selectedPartner = partnersData.find(p => p.id === id);
+            renderPartnerModal();
+        }
+
+        window.closePartnerModal = function() {
+            selectedPartner = null;
+            renderPartnerModal();
         }
 
         // --- RENDERING FUNCTIONS ---
@@ -1080,7 +1163,7 @@
             }).join('');
         }
         
-        // RENDER FUNCTION FOR PARTNERS
+        // RENDER FUNCTION FOR PARTNERS (UPDATED)
         function renderPartners() {
             const partnersListEl = document.getElementById('partners-list');
             
@@ -1093,14 +1176,18 @@
                 partnersListEl.innerHTML = `<div class="col-span-full flex justify-center items-center p-4 h-24 text-gray-500 text-lg"><i class="fas fa-exclamation-triangle mr-2 text-error-red"></i> Database not connected.</div>`;
                 return;
             }
+            
+            // Filter out partners without a logoUrl
+            const displayPartners = partnersData.filter(p => p.logoUrl);
 
-            if (partnersData.length === 0) {
-                const content = isAdmin ? 'No partners listed yet. Click "Add Partner" above to get started.' : 'No official partners to display yet.';
+
+            if (displayPartners.length === 0) {
+                const content = isAdmin ? 'No partners listed or no partners have a logo URL. Click "Add Partner" above to get started.' : 'No official partners to display yet.';
                 partnersListEl.innerHTML = `<div class="col-span-full flex justify-center items-center p-4 h-24 text-xl text-gray-500">${content}</div>`;
                 return;
             }
 
-            partnersListEl.innerHTML = partnersData.map(partner => {
+            partnersListEl.innerHTML = displayPartners.map(partner => {
                 // Admin Edit Mode
                 if (partner.isEditing && isAdmin) {
                     return `
@@ -1109,8 +1196,13 @@
                             <input id="edit-partner-name-${partner.id}" type="text" value="${partner.name}" placeholder="Name" class="w-full p-1 border rounded text-text-dark mb-2 font-bold">
                             <input id="edit-partner-logo-${partner.id}" type="url" value="${partner.logoUrl || ''}" placeholder="Logo URL" class="w-full p-1 border rounded text-text-dark mb-2 text-sm">
                             <input id="edit-partner-url-${partner.id}" type="url" value="${partner.url}" placeholder="Website URL" class="w-full p-1 border rounded text-text-dark mb-2 text-sm">
-                            <textarea id="edit-partner-description-${partner.id}" rows="2" placeholder="Description" class="w-full p-1 mb-3 border rounded text-text-dark text-sm">${partner.description || ''}</textarea>
+                            <textarea id="edit-partner-description-${partner.id}" rows="2" placeholder="Description" class="w-full p-1 mb-2 border rounded text-text-dark text-sm">${partner.description || ''}</textarea>
                             
+                            <!-- EDIT FIELDS FOR PARTNER-SPECIFIC CONTACT -->
+                            <input id="edit-partner-social-label-${partner.id}" type="text" value="${partner.socialLabel || ''}" placeholder="Social Label" class="w-full p-1 border rounded text-text-dark mb-2 text-sm">
+                            <input id="edit-partner-social-url-${partner.id}" type="url" value="${partner.socialUrl || ''}" placeholder="Social URL" class="w-full p-1 border rounded text-text-dark mb-3 text-sm">
+                            <!-- END EDIT FIELDS -->
+
                             <div class="flex space-x-2">
                                 <button onclick="savePartnerEntry('${partner.id}')" class="flex-grow px-3 py-1 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition">
                                     <i class="fas fa-check"></i> Save
@@ -1123,14 +1215,15 @@
                     `;
                 }
 
-                // Public View Mode
+                // Public View Mode (UPDATED: Changed <a> to <div> and added onclick)
                 const placeholder = `https://placehold.co/150x150/F8F4E3/A0522D?text=${partner.name.substring(0, 3).toUpperCase()}`;
                 
                 return `
-                    <a href="${partner.url}" target="_blank" id="partner-item-${partner.id}" 
-                        class="group bg-card-light shadow-md p-4 rounded-xl flex flex-col items-center justify-between border border-gray-200 transition duration-300 hover:shadow-xl hover:shadow-accent-light/30 transform hover:scale-[1.03]">
+                    <div id="partner-item-${partner.id}" 
+                        onclick="openPartnerModal('${partner.id}')"
+                        class="group bg-card-light shadow-md p-4 rounded-xl flex flex-col items-center justify-between border border-gray-200 transition duration-300 hover:shadow-xl hover:shadow-accent-light/30 transform hover:scale-[1.03] cursor-pointer">
                         
-                        <div class="partner-logo-container mb-3">
+                        <div class="partner-logo-container w-16 h-16 mb-3">
                             <img src="${partner.logoUrl || placeholder}" 
                                  alt="${partner.name} Logo" 
                                  class="partner-logo-image"
@@ -1141,24 +1234,88 @@
                         <h3 class="text-lg font-bold text-text-dark group-hover:text-accent-coffee">${partner.name}</h3>
                         <p class="text-xs text-text-dark/70 text-center mt-1 mb-3 h-8 overflow-hidden">${partner.description || 'Partnered for success.'}</p>
                         
-                        <span class="text-xs text-accent-light font-semibold group-hover:underline">Visit Site <i class="fas fa-external-link-alt ml-1 text-[10px]"></i></span>
+                        <span class="text-xs text-accent-light font-semibold group-hover:underline">View Partnership Details <i class="fas fa-info-circle ml-1 text-[10px]"></i></span>
 
                         ${isAdmin ? `
                             <div class="mt-3 flex space-x-2 w-full">
-                                <button onclick="event.preventDefault(); togglePartnerEdit('${partner.id}')" class="flex-grow px-2 py-1 bg-gray-100 text-text-dark text-xs rounded-lg hover:bg-gray-200 transition">
+                                <button onclick="event.stopPropagation(); togglePartnerEdit('${partner.id}')" class="flex-grow px-2 py-1 bg-gray-100 text-text-dark text-xs rounded-lg hover:bg-gray-200 transition">
                                     <i class="fas fa-edit"></i> Edit
                                 </button>
-                                <button onclick="event.preventDefault(); deletePartner('${partner.id}')" class="px-2 py-1 bg-error-red text-white text-xs rounded-lg hover:bg-red-700 transition">
+                                <button onclick="event.stopPropagation(); deletePartner('${partner.id}')" class="px-2 py-1 bg-error-red text-white text-xs rounded-lg hover:bg-red-700 transition">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
                             </div>
                         ` : ''}
-                    </a>
+                    </div>
                 `;
             }).join('');
         }
 
+        // NEW: RENDER FUNCTION FOR PARTNER MODAL (UPDATED to show Partner's social)
+        function renderPartnerModal() {
+            const modalContainer = document.getElementById('partner-modal-container');
 
+            if (!selectedPartner) {
+                modalContainer.innerHTML = '';
+                return;
+            }
+
+            const partner = selectedPartner;
+            
+            const placeholder = `https://placehold.co/150x150/F8F4E3/A0522D?text=${partner.name.substring(0, 3).toUpperCase()}`;
+            
+            // Conditional HTML block for partner's specific contact information
+            const partnerSocialSection = partner.socialUrl ? `
+                <h3 class="text-xl font-semibold text-text-dark border-b border-gray-200 pb-2 mb-4">Contact ${partner.name}</h3>
+                <div class="mb-6 text-center">
+                    <a href="${partner.socialUrl}" target="_blank" class="inline-block w-full md:w-auto px-5 py-2 bg-accent-light text-text-dark font-semibold rounded-lg hover:bg-accent-coffee hover:text-white transition">
+                        <i class="fas fa-link mr-2"></i> ${partner.socialLabel || 'Official Contact Link'}
+                    </a>
+                </div>
+            ` : `
+                <h3 class="text-xl font-semibold text-text-dark border-b border-gray-200 pb-2 mb-4">Contact Information</h3>
+                <p class="text-center text-sm text-gray-500 mb-6">No direct contact link provided for this partner.</p>
+            `;
+
+
+            modalContainer.innerHTML = `
+                <div class="modal-overlay" onclick="closePartnerModal()">
+                    <div class="bg-card-light p-8 rounded-xl shadow-2xl max-w-lg w-11/12 transform transition-all duration-300 scale-100" onclick="event.stopPropagation()">
+                        
+                        <div class="flex flex-col items-center mb-6">
+                            <div class="partner-logo-container w-20 h-20 mb-3 border-4 border-accent-light">
+                                <img src="${partner.logoUrl || placeholder}" 
+                                     alt="${partner.name} Logo" 
+                                     class="partner-logo-image"
+                                     onerror="this.onerror=null; this.src='${placeholder}';"
+                                />
+                            </div>
+                            <h2 class="text-3xl font-bold text-accent-coffee mb-2">${partner.name}</h2>
+                        </div>
+
+                        <h3 class="text-xl font-semibold text-text-dark border-b border-gray-200 pb-2 mb-4">Our Partnership</h3>
+                        <p class="text-text-dark/90 mb-6 leading-relaxed">
+                            ${partner.description || `JinSun is proud to partner with ${partner.name}. This collaboration focuses on expanding our reach and creating innovative new projects in the music and media space.`}
+                        </p>
+
+                        ${partner.url ? `
+                            <div class="mb-6 text-center">
+                                <a href="${partner.url}" target="_blank" class="inline-block w-full md:w-auto px-5 py-2 bg-accent-coffee text-white font-semibold rounded-lg hover-darken transition">
+                                    <i class="fas fa-external-link-alt mr-2"></i> Visit Partner Website
+                                </a>
+                            </div>
+                        ` : ''}
+
+                        <!-- PARTNER SPECIFIC CONTACT SECTION -->
+                        ${partnerSocialSection}
+                        
+                        <button onclick="closePartnerModal()" class="mt-6 w-full py-3 bg-gray-300 text-text-dark font-semibold rounded-lg hover:bg-gray-400 transition">
+                            Close Details
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
         
         function renderAuthUI() {
             const authEl = document.getElementById('auth-ui');
@@ -1241,8 +1398,10 @@
             renderNews(); 
             renderPartners(); 
             renderAuthUI(); 
+            // Note: renderPartnerModal is called by the onSnapshot listener for partners data, 
+            // and open/close functions, not by renderApp directly, to ensure its state is managed independently.
         }
     </script>
 
 </body>
-</html>	
+</html>
