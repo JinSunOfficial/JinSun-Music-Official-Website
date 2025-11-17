@@ -28,7 +28,7 @@
     </script>
     <style>
         /* Import Inter font and Font Awesome for icons */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght+100..900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
         @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css');
         
         /* Apply custom cream background and coffee text colors */
@@ -250,7 +250,7 @@
 <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         // NOTE: signInAnonymously has been removed from imports to prevent its usage.
-        import { getAuth, signInWithCustomToken, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInWithCustomToken, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, setPersistence, browserSessionPersistence, sendEmailVerification, updateProfile } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, onSnapshot, collection, setDoc, deleteDoc, addDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -482,11 +482,15 @@
 
         window.handleSignUp = async function() {
             if (!auth) { setAuthStatus('Authentication service unavailable.', true); return; }
+            
+            // NEW: Get Username
+            const username = document.getElementById('auth-username-input').value.trim();
             const email = document.getElementById('auth-email-input').value.trim();
             const password = document.getElementById('auth-password-input').value;
             
-            if (!email || password.length < 6) {
-                setAuthStatus('Email and a password of at least 6 characters are required.');
+            // NEW: Validate username
+            if (!email || password.length < 6 || !username) {
+                setAuthStatus('Email, a password of at least 6 characters, and a username are required.');
                 return;
             }
 
@@ -494,11 +498,24 @@
             try {
                 // Ensure persistence is set before creating the user session
                 await setPersistence(auth, browserSessionPersistence);
-                // User is signed in immediately upon creation (No email verification required)
-                await createUserWithEmailAndPassword(auth, email, password);
                 
-                setAuthStatus('Account created and signed in successfully!', false);
-                currentAuthMode = 'profile'; // Move directly to profile view
+                // 1. Create the user
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+                
+                // 2. Set the Display Name (Username)
+                await updateProfile(user, {
+                    displayName: username
+                });
+                
+                // 3. Send verification email immediately
+                await sendEmailVerification(user);
+                
+                // 4. Force sign out after creation to require verification on next login
+                await signOut(auth);
+                
+                setAuthStatus(`Account created for ${username}. Please check your email inbox to verify your account before logging in.`, false);
+                currentAuthMode = 'login'; // Direct user to the login screen
                 
             } catch (error) {
                 console.error("Sign Up Error:", error);
@@ -519,8 +536,17 @@
             setAuthStatus('Logging in...', false);
             try {
                 await setPersistence(auth, browserSessionPersistence); 
+                
                 // Sign in
-                await signInWithEmailAndPassword(auth, email, password);
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                // Check for email verification status
+                if (!user.emailVerified) {
+                    await signOut(auth); // Immediately sign out if not verified
+                    setAuthStatus('Login failed. Please verify your email first. A verification link was sent upon sign up.', true);
+                    return;
+                }
                 
                 setAuthStatus('Login successful!', false);
                 currentAuthMode = 'profile'; 
@@ -1335,7 +1361,7 @@
                         </div>
                     `;
                     break;
-                    
+                        
                 case 'partner':
                     formTitle = 'Edit Partner';
                     formFields = `
@@ -1422,14 +1448,17 @@
 
 
             const userEmail = currentUser?.email;
+            const userDisplayName = currentUser?.displayName;
             
             if (userEmail) {
                 // 1. Logged in member/admin (Show Profile/Logout)
                 authEl.innerHTML = `
-                    <p class="text-md font-semibold text-text-dark mb-2 flex items-center justify-center">
+                    <p class="text-md font-semibold text-text-dark mb-2 flex flex-col items-center justify-center">
                         <i class="fas fa-user-circle mr-2 text-accent-coffee"></i> 
-                        Welcome, ${isAdmin ? '<span class="text-error-red font-bold">(Admin)</span> ' : 'Member '} ${userEmail}
+                        Welcome, ${isAdmin ? '<span class="text-error-red font-bold">(Admin)</span> ' : 'Member '}
+                        <span class="font-bold text-lg">${userDisplayName || userEmail}</span>
                     </p>
+                    <p class="text-xs text-gray-500 mb-2">${userEmail}</p>
                     <button onclick="handleSignOut()" class="px-4 py-2 bg-gray-300 text-text-dark font-semibold rounded-lg hover:bg-gray-400 transition">
                         <i class="fas fa-sign-out-alt mr-1"></i> Sign Out
                     </button>
@@ -1439,9 +1468,9 @@
             } else if (!currentUser && currentAuthMode === 'guest_prompt') {
                  // 2. Unauthenticated Browsing Mode (Show Button to toggle to Form)
                  authEl.innerHTML = `
-                    <p class="text-md font-semibold text-text-dark mb-2">
+                    <p class="text-md font-semibold text-text-dark mb-2 flex items-center justify-center">
                         <i class="fas fa-user-circle mr-2 text-gray-500"></i> 
-                        Browsing as Guest (Unauthenticated).
+                        You're not signed in.
                     </p>
                      <button onclick="toggleAuthMode('login')" class="px-4 py-2 bg-accent-coffee text-white font-semibold rounded-lg hover-darken transition">
                         <i class="fas fa-sign-in-alt mr-1"></i> Login / Sign Up
@@ -1452,11 +1481,17 @@
                 // 3. Login/Signup Form 
                 const isLogin = currentAuthMode === 'login';
                 
+                // Add Username input only for signup
+                const usernameInput = isLogin ? '' : `
+                    <input type="text" id="auth-username-input" placeholder="Enter Username (Display Name)" class="w-full p-3 border rounded-lg focus:ring-accent-coffee focus:border-accent-coffee text-text-dark" required>
+                `;
+
                 authEl.innerHTML = `
                     <h3 class="text-lg font-bold mb-3 text-accent-coffee">${isLogin ? 'Member Login' : 'Create Account'}</h3>
                     <div class="space-y-3">
+                        ${usernameInput}
                         <input type="email" id="auth-email-input" placeholder="Email Address" class="w-full p-3 border rounded-lg focus:ring-accent-coffee focus:border-accent-coffee text-text-dark">
-                        <input type="password" id="auth-password-input" placeholder="Password (min 6 characters)" class="w-full p-3 border rounded-lg focus:ring-accent-coffee focus:border-accent-coffee text-text-dark">
+                        <input type="password" id="auth-password-input" placeholder="Password (min 6 characters)" class="w-full p-3 border rounded-lg text-text-dark focus:ring-accent-coffee focus:border-accent-coffee">
                     </div>
                     <div class="mt-4 flex flex-col space-y-2">
                         <button onclick="${isLogin ? 'handleSignIn()' : 'handleSignUp()'}" class="px-5 py-3 bg-accent-coffee text-white font-semibold rounded-lg hover-darken transition">
